@@ -238,9 +238,12 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
 
 **`qm handoff mcp`**（P17.3 阡陌侧）
 
-- stdio MCP。qmcode 每个线程启动时各拉起一份；`/mcp`、app-server 的 `mcpServerStatus/list` 会再起一份（P17.2 第 6 项 T2）。必须无状态、可多实例并发。
-- 进程的工作目录是线程的 `cwd`（读代码：`core/src/session/mcp.rs` 的 `local_process_cwd`；未实测）。
-- 继承 qmcode 进程的环境，其中可能有模型 key 所在的环境变量；不得把环境变量写进日志。
+- stdio MCP。qmcode 每个线程启动时各拉起一份（argv 为 `qm handoff mcp`）；`/mcp`、app-server 的 `mcpServerStatus/list` 会再起一份（P17.2 第 6 项 T2）。必须无状态、可多实例并发。
+- 进程的工作目录是线程的 `cwd`（实测，见第 10.3 节实测记录；代码在 `core/src/session/mcp.rs` 的 `local_process_cwd`）。
+- **环境是过滤过的**，不是 qmcode 进程的完整环境：只带 `HOME`、`LOGNAME`、`PATH`、`SHELL`、`USER`、`LANG`、`LC_ALL`、`TERM`、`TMPDIR`、`TZ`（macOS 另有 `__CF_USER_TEXT_ENCODING`）中已设置的那些、自定义 CA 相关变量，以及配置里 `env`、`env_vars` 指定的变量（`rmcp-client/src/utils.rs` 的 `DEFAULT_ENV_VARS`、`create_env_for_mcp_server`）。实测拿不到 `QMCODE_HOME`；也没有 `CODEX_THREAD_ID`、`SSH_AUTH_SOCK` 和模型 key。所以：
+  - 不能靠 `CODEX_THREAD_ID` 认会话，按计划用工作目录去 `sessions.json` 里找；
+  - 用户改过 `QMCODE_HOME` 时，`qm handoff mcp` 看不到，只能用 `qm handoff sync`（拿得到完整环境）记下的会话文件绝对路径，或者在内置表里加 `env_vars = ["QMCODE_HOME"]` 把它透传过去（本次未加，待定）；
+  - 推送中枢用专用钥匙（`-i <钥匙> -o IdentitiesOnly=yes`），不依赖 ssh-agent。
 
 **`qm handoff sync --hook qmcode`**（P17.4）
 
@@ -264,7 +267,9 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
   - `client` 是接入 app-server 的客户端名，没有时整个键不出现；`last-assistant-message` 可能是 `null`。
   - `input-messages`、`last-assistant-message` 是对话原文，不要写日志。
 - qmcode 即发即忘：标准输入接 `/dev/null`，标准输出与标准错误丢弃，不等进程退出，不看退出码。
-- 环境是 qmcode 进程的完整环境（去掉 5 个启动上下文变量，P17.2 第 6 项），含 `PATH`、`SSH_AUTH_SOCK`，也含模型 key 所在的变量；不得记录环境变量。
+- **进程的工作目录是 qmcode（或 app-server）进程自己的工作目录，不是线程的 `cwd`**（实测：app-server 在另一个目录启动时，notify 进程的工作目录跟 app-server 一致）。仓库位置一律取 JSON 里的 `cwd`。
+- 环境是 qmcode 进程的完整环境（去掉 5 个启动上下文变量，P17.2 第 6 项），含 `PATH`、`QMCODE_HOME`（实测）、`SSH_AUTH_SOCK`，也含模型 key 所在的变量；没有 `CODEX_THREAD_ID`（实测），线程 id 在 JSON 里。不得记录环境变量。
+- 只在模型回合结束后触发；`/handoff`、`!` 命令开的 shell 回合结束后不触发（实测）。
 - 回合紧挨着时会连续触发；也会为没有 rollout 文件的临时线程触发（P17.2 第 5、7 项），找不到会话文件就跳过。
 
 ### 10.3 界面里的 `/handoff`、`/pull`
