@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode; help text names $QMCODE_HOME instead of $CODEX_HOME.
 use clap::Args;
 use clap::FromArgMatches;
 use clap::Parser;
@@ -37,7 +37,7 @@ pub struct Cli {
     #[arg(long = "ephemeral", global = true, default_value_t = false)]
     pub ephemeral: bool,
 
-    /// Do not load `$CODEX_HOME/config.toml`; auth still uses `CODEX_HOME`.
+    /// Do not load `$QMCODE_HOME/config.toml`; auth still uses `QMCODE_HOME`.
     #[arg(long = "ignore-user-config", global = true, default_value_t = false)]
     pub ignore_user_config: bool,
 

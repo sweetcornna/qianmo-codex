@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): help text names $QMCODE_HOME instead of $CODEX_HOME.
 pub(crate) mod debug_sandbox;
 mod exit_status;
 pub(crate) mod login;
@@ -61,7 +62,7 @@ pub struct SeatbeltCommand {
     )]
     pub permissions_profile: Option<String>,
 
-    /// Layer $CODEX_HOME/<name>.config.toml on top of the base user config.
+    /// Layer $QMCODE_HOME/<name>.config.toml on top of the base user config.
     #[arg(long = "profile", short = 'p')]
     pub config_profile: Option<ProfileV2Name>,
 
@@ -117,7 +118,7 @@ pub struct LandlockCommand {
     )]
     pub permissions_profile: Option<String>,
 
-    /// Layer $CODEX_HOME/<name>.config.toml on top of the base user config.
+    /// Layer $QMCODE_HOME/<name>.config.toml on top of the base user config.
     #[arg(long = "profile", short = 'p')]
     pub config_profile: Option<ProfileV2Name>,
 
@@ -160,7 +161,7 @@ pub struct WindowsCommand {
     )]
     pub permissions_profile: Option<String>,
 
-    /// Layer $CODEX_HOME/<name>.config.toml on top of the base user config.
+    /// Layer $QMCODE_HOME/<name>.config.toml on top of the base user config.
     #[arg(long = "profile", short = 'p')]
     pub config_profile: Option<ProfileV2Name>,
 

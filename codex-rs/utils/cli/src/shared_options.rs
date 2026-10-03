@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): help text names $QMCODE_HOME instead of $CODEX_HOME.
 //! Shared command-line flags used by both interactive and non-interactive Codex entry points.
 
 use crate::CliConfigOverrides;
@@ -31,7 +32,7 @@ pub struct SharedCliOptions {
     #[arg(long = "local-provider")]
     pub oss_provider: Option<String>,
 
-    /// Layer $CODEX_HOME/<name>.config.toml on top of the base user config.
+    /// Layer $QMCODE_HOME/<name>.config.toml on top of the base user config.
     #[arg(long = "profile", short = 'p')]
     pub config_profile_v2: Option<ProfileV2Name>,
 

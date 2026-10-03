@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): help usage, --version, and shell completions use the qmcode name; `qmcode update` refuses to run the upstream updater; user-visible command names and paths use qmcode and ~/.qmcode.
+// Modified by Qianmo AgentNest Team (2026): help usage, --version, and shell completions use the qmcode name; `qmcode update` refuses to run the upstream updater; user-visible command names and paths use qmcode and ~/.qmcode; help text names $QMCODE_HOME instead of $CODEX_HOME.
 use clap::Args;
 use clap::CommandFactory;
 use clap::Parser;
@@ -475,7 +475,7 @@ type HostSandboxArgs = UnsupportedSandboxArgs;
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 #[derive(Debug, Parser)]
 struct UnsupportedSandboxArgs {
-    /// Layer $CODEX_HOME/<name>.config.toml on top of the base user config.
+    /// Layer $QMCODE_HOME/<name>.config.toml on top of the base user config.
     #[arg(long = "profile", short = 'p')]
     pub config_profile: Option<ProfileV2Name>,
 
@@ -3462,7 +3462,8 @@ mod tests {
     }
 
     // Qianmo: every --help page (hidden subcommands included) names the binary
-    // qmcode and its home ~/.qmcode, never the upstream `codex` command or ~/.codex.
+    // qmcode and its home ~/.qmcode ($QMCODE_HOME), never the upstream `codex` command,
+    // ~/.codex or $CODEX_HOME.
     #[test]
     fn help_pages_use_qmcode_command_and_home() {
         let mut paths = vec![Vec::new()];
@@ -3485,6 +3486,7 @@ mod tests {
             for line in help.lines() {
                 // Case-sensitive: the product noun "Codex" in prose is not a command.
                 if line.contains("~/.codex")
+                    || line.contains("$CODEX_HOME")
                     || line.contains("Usage: codex")
                     || line.contains("`codex ")
                     || line.contains("`codex`")
