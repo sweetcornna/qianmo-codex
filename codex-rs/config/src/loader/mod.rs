@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): Unix system config and requirements live under /etc/qmcode.
 mod application;
 mod layer_io;
 mod local;
@@ -76,7 +77,7 @@ pub use windows::WindowsSystemConfigNamespaceProbe;
 pub use windows::probe_windows_system_config_namespace;
 
 #[cfg(unix)]
-const SYSTEM_CONFIG_TOML_FILE_UNIX: &str = "/etc/codex/config.toml";
+const SYSTEM_CONFIG_TOML_FILE_UNIX: &str = "/etc/qmcode/config.toml";
 
 #[cfg(windows)]
 const DEFAULT_PROGRAM_DATA_DIR_WINDOWS: &str = r"C:\ProgramData";
@@ -109,21 +110,21 @@ async fn first_layer_config_error_from_entries(layers: &[ConfigLayerEntry]) -> O
 /// composed with config-style TOML merging plus field-specific handling for
 /// hooks, rules, deny-read permissions, and remote sandbox config:
 ///
-/// - system    `/etc/codex/requirements.toml` (Unix) or
+/// - system    `/etc/qmcode/requirements.toml` (Unix) or
 ///   `%ProgramData%\OpenAI\Codex\requirements.toml` (Windows)
 /// - cloud:    enterprise-managed cloud config bundle requirements
-/// - legacy:   `/etc/codex/managed_config.toml` (Unix) reinterpreted as
+/// - legacy:   `/etc/qmcode/managed_config.toml` (Unix) reinterpreted as
 ///   requirements.toml
 /// - admin:    managed preferences (*)
 ///
 /// For backwards compatibility, Unix continues to load
-/// `/etc/codex/managed_config.toml` and map it to `requirements.toml`.
+/// `/etc/qmcode/managed_config.toml` and map it to `requirements.toml`.
 ///
 /// Configuration is built up from multiple layers in the following order:
 ///
 /// - package:  optional default configuration supplied with the Codex package
 /// - admin:    managed preferences (*)
-/// - system    `/etc/codex/config.toml` (Unix) or
+/// - system    `/etc/qmcode/config.toml` (Unix) or
 ///   `%ProgramData%\OpenAI\Codex\config.toml` (Windows)
 /// - cloud     enterprise-managed cloud config bundle fragments
 /// - user      `${CODEX_HOME}/config.toml`
@@ -722,7 +723,7 @@ pub async fn load_requirements_toml(
 
 #[cfg(unix)]
 fn system_requirements_toml_file() -> io::Result<AbsolutePathBuf> {
-    AbsolutePathBuf::from_absolute_path(Path::new("/etc/codex/requirements.toml"))
+    AbsolutePathBuf::from_absolute_path(Path::new("/etc/qmcode/requirements.toml"))
 }
 
 #[cfg(windows)]
@@ -1845,7 +1846,7 @@ async fn load_root_checkout_project_config(
     )
 }
 /// The legacy mechanism for specifying admin-enforced configuration is to read
-/// from a file like `/etc/codex/managed_config.toml` that has the same
+/// from a file like `/etc/qmcode/managed_config.toml` that has the same
 /// structure as `config.toml` where fields like `approval_policy` can specify
 /// exactly one value rather than a list of allowed values.
 ///
