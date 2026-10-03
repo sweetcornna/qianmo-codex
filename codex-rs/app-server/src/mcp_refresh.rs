@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): MCP refresh test ignores the built-in qianmo handoff server.
 use crate::config_manager::ConfigManager;
 use codex_core::CodexThread;
 use codex_core::ThreadManager;
@@ -224,6 +225,8 @@ enabled = false
         let refresh_config = load_refresh_config(thread.as_ref(), &config_manager).await?;
         let mut actual = refresh_config.mcp_servers.get().clone();
         actual.remove(codex_mcp::CODEX_APPS_MCP_SERVER_NAME);
+        // Qianmo: the packaged defaults add the built-in `qianmo` handoff server.
+        actual.remove("qianmo");
         let expected = serde_json::from_value::<HashMap<String, McpServerConfig>>(json!({
             "global": {
                 "command": "global-mcp",

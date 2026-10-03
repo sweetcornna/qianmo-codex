@@ -42,6 +42,7 @@
 | `app-server-daemon/src/settings.rs` | `auto_update_enabled` 的结构体默认值和反序列化默认值都改为 `false` | 托管 daemon 开着自动更新时会从上游地址装回官方包并切过去运行 |
 | `app-server-daemon/src/settings_tests.rs` | 遥测标签用例按默认关闭更新期望值；新增「没有设置文件时自动更新为关」用例 | 跟随默认值 |
 | `app-server-daemon/src/update_loop_tests.rs` | 两条测更新器行为的用例在开头显式写入 `autoUpdateEnabled: true` | 这两条原先靠默认开启；改后仍覆盖「开启时」的更新器路径 |
+| `app-server/src/mcp_refresh.rs` | 用例 `refresh_config_preserves_thread_mcp_overrides` 比较 MCP 服务器表前先去掉内置的 `qianmo` 一项（和它原本去掉 `codex_apps` 的做法一样） | 用例从带内置层的配置出发，表里多出 `qianmo`；它要验的是线程级覆盖不丢，与内置项无关。`codex-app-server` 不在合并门禁内，P17.3 跑它的单测时发现 |
 | `tui/src/external_editor.rs` | 外部编辑器草稿目录的默认家目录回退由 `~/.codex` 改为 `~/.qmcode` | 这是写入路径：沙箱策略下状态目录不可用时会回退到这里建 `editor/` 临时文件，不改会写进官方目录 |
 | `tui/src/external_editor_tests.rs` | 「默认家目录可写时退到工作区」用例把 `~/.qmcode` 设为可写（原为 `~/.codex`） | 跟随上面的回退目录；不改的话，HOME 不在 `/tmp` 下时用例失败，还会在真实 `~/.qmcode/editor` 建目录 |
 | `tui/src/app/tests.rs` | 「编辑器目录可写时拒绝」快照用例的回退目录改为 `~/.qmcode` | 同上 |
