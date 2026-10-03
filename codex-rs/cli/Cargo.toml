@@ -1,13 +1,14 @@
+# Modified by Qianmo AgentNest Team (2026): main binary renamed from codex to qmcode.
 [package]
 name = "codex-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 build = "build.rs"
-default-run = "codex"
+default-run = "qmcode"
 
 [[bin]]
-name = "codex"
+name = "qmcode"
 path = "src/main.rs"
 
 [[bin]]
