@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): help usage and shell completions use the qmcode binary name.
+// Modified by Qianmo AgentNest Team (2026): help usage, --version, and shell completions use the qmcode name.
 use clap::Args;
 use clap::CommandFactory;
 use clap::Parser;
@@ -113,6 +113,9 @@ use codex_terminal_detection::TerminalName;
 /// If no subcommand is specified, options will be forwarded to the interactive CLI.
 #[derive(Debug, Parser)]
 #[clap(
+    // `--version` prints `qmcode <version>` so it is distinguishable from the
+    // upstream `codex-cli` package.
+    name = "qmcode",
     author,
     version,
     // If a sub‑command is given, ignore requirements of the default args.
@@ -3438,6 +3441,17 @@ mod tests {
             let help = help_from_args(&["codex", "plugin", "marketplace", subcommand, "--help"]);
             assert!(help.contains(usage), "{help}");
         }
+    }
+
+    #[test]
+    fn version_output_uses_qmcode_name() {
+        let err = MultitoolCli::try_parse_from(["qmcode", "--version"])
+            .expect_err("version should short-circuit");
+        assert_eq!(err.kind(), clap::error::ErrorKind::DisplayVersion);
+        assert_eq!(
+            err.to_string(),
+            format!("qmcode {}\n", env!("CARGO_PKG_VERSION"))
+        );
     }
 
     #[test]
