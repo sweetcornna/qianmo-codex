@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): status test uses the ~/.qmcode global AGENTS.md path.
 use crate::clock_format::ClockFormat;
 use crate::exec_command::relativize_to_home;
 use crate::legacy_core::config::Config;
@@ -297,7 +298,7 @@ mod tests {
         config.cwd = home.join("workspace").join("project").abs();
 
         let paths = [
-            home.join(".codex").join("AGENTS.md"),
+            home.join(".qmcode").join("AGENTS.md"),
             home.join("workspace").join("AGENTS.md"),
             config.cwd.join("AGENTS.md").to_path_buf(),
             config.cwd.join("nested").join("AGENTS.md").to_path_buf(),
@@ -308,7 +309,7 @@ mod tests {
 
         insta::assert_snapshot!(
             summary.replace('\\', "/"),
-            @"~/.codex/AGENTS.md, ../AGENTS.md, AGENTS.md, nested/AGENTS.md"
+            @"~/.qmcode/AGENTS.md, ../AGENTS.md, AGENTS.md, nested/AGENTS.md"
         );
     }
 
