@@ -10,8 +10,9 @@
 #   output-dir defaults to codex-rs/target/qianmo-dist (ignored by git).
 #
 # Writes to output-dir, with NAME = qmcode-<upstream tag>-<short commit>-<arch>:
-#   NAME             the release binary
-#   NAME.sha256      `sha256sum` line for NAME
+#   NAME             the release binary, stripped (the deployable artifact)
+#   NAME.debug       its debug symbols, linked back with .gnu_debuglink
+#   NAME.sha256      `sha256sum` lines for NAME and NAME.debug
 #   NAME.buildinfo   tag, commit, toolchain, host, build seconds, sha256, size
 #   NAME.build.log   full cargo output
 #
@@ -38,7 +39,7 @@ case "$(uname -m)" in
   *) die "unsupported architecture: $(uname -m)" ;;
 esac
 
-for tool in git rustup sha256sum; do
+for tool in git rustup sha256sum objcopy; do
   command -v "${tool}" >/dev/null 2>&1 || die "${tool} not found"
 done
 
@@ -104,8 +105,17 @@ git -C "${repo_root}" diff --quiet -- codex-rs/Cargo.lock ||
 binary="${target_dir}/release/qmcode"
 [[ -x "${binary}" ]] || die "expected binary not found: ${binary}"
 install -m 0755 "${binary}" "${out_dir}/${name}"
-(cd "${out_dir}" && sha256sum "${name}" >"${name}.sha256")
-sha256="$(cut -d' ' -f1 "${out_dir}/${name}.sha256")"
+# The upstream release profile keeps symbols (strip = false) and leaves
+# stripping to packaging. Ship a stripped binary and keep the symbols in a
+# sidecar linked by .gnu_debuglink, the same split upstream packaging makes.
+(
+  cd "${out_dir}"
+  objcopy --only-keep-debug "${name}" "${name}.debug"
+  chmod 0644 "${name}.debug"
+  objcopy --strip-all --add-gnu-debuglink="${name}.debug" "${name}"
+)
+(cd "${out_dir}" && sha256sum "${name}" "${name}.debug" >"${name}.sha256")
+sha256="$(head -n 1 "${out_dir}/${name}.sha256" | cut -d' ' -f1)"
 size_bytes="$(wc -c <"${out_dir}/${name}" | tr -d ' ')"
 
 cat >"${out_dir}/${name}.buildinfo" <<EOF

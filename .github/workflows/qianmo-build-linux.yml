@@ -104,6 +104,7 @@ jobs:
           name: ${{ steps.dist.outputs.name }}
           path: |
             ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.debug
             ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.sha256
             ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.buildinfo
             ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.build.log

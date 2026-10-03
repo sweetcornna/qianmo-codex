@@ -127,7 +127,7 @@ Linux 发布产物**以 GitHub Actions 为主**：workflow `.github/workflows/qi
 2. 用 apt 装 `build-essential pkg-config libssl-dev`；
 3. 用 rustup 装 `rust-toolchain.toml` 钉的工具链；
 4. 执行 `qianmo/build-linux.sh`；
-5. 用 `actions/upload-artifact` 上传产物、`.sha256`、`.buildinfo`（含编译秒数）、`.build.log`，保留 30 天；构建失败时单独上传日志。
+5. 用 `actions/upload-artifact` 上传产物（已剥离）、`.debug`（调试符号）、`.sha256`、`.buildinfo`（含编译秒数）、`.build.log`，保留 30 天；构建失败时单独上传日志。
 
 第三方 action 都钉完整的提交 sha。触发方式：
 
@@ -155,7 +155,8 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
 - 短提交：`git rev-parse --short=10 HEAD`，固定 10 位，不随仓库对象数变化。
 - 架构：`x86_64` 或 `aarch64`。
 - 工作区有未提交改动且设了 `QMCODE_ALLOW_DIRTY=1` 时，加后缀 `-dirty`。
-- 同目录附带 `<名字>.sha256`（`sha256sum` 格式）、`<名字>.buildinfo`（标签、完整提交、工具链、主机、起止时间、编译秒数、sha256、字节数）、`<名字>.build.log`（cargo 完整输出）。
+- 产物是剥离过的部署二进制；调试符号在 `<名字>.debug`，经 `.gnu_debuglink` 关联（上游 release 配置 `strip = false`、留给打包剥离，这里照同样的拆法做）。首次未剥离的产物 1.38 GB，部署不用它。
+- 同目录附带 `<名字>.sha256`（`sha256sum` 格式，含产物与 `.debug` 两行）、`<名字>.buildinfo`（标签、完整提交、工具链、主机、起止时间、编译秒数、sha256、字节数）、`<名字>.build.log`（cargo 完整输出）。
 
 ## 8. 合并记录
 
