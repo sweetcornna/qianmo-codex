@@ -1,3 +1,4 @@
+# Modified by Qianmo AgentNest Team (2026): default-home tests for the skill installer (QMCODE_HOME, never ~/.codex).
 """Local-only regression tests for the bundled skill-installer script.
 
 Run manually; these tests are not wired into CI:
@@ -131,6 +132,120 @@ class SkillInstallerSymlinkTests(unittest.TestCase):
         self.assertEqual(
             installed_alias.read_text(encoding="utf-8"), "safe skill contents\n"
         )
+
+
+class SkillInstallerDefaultHomeTests(unittest.TestCase):
+    """Qianmo: without --dest the scripts use $QMCODE_HOME/skills, never ~/.codex."""
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.home = self.root / "home"
+        self.home.mkdir()
+        self.repository = self.root / "repository"
+        self.skill = self.repository / "skill"
+        self.skill.mkdir(parents=True)
+        (self.skill / "SKILL.md").write_text("Synthetic test skill\n", encoding="utf-8")
+        for args in (
+            ["init", "--initial-branch=main", str(self.repository)],
+            ["-C", str(self.repository), "add", "."],
+            [
+                "-C",
+                str(self.repository),
+                "-c",
+                "user.name=Skill Installer Test",
+                "-c",
+                "user.email=skill-installer@example.invalid",
+                "commit",
+                "-m",
+                "synthetic skill fixture",
+            ],
+        ):
+            subprocess.run(["git", *args], check=True, capture_output=True, text=True)
+
+    def environment(self, **overrides: str) -> dict[str, str]:
+        environment = {
+            key: value
+            for key, value in os.environ.items()
+            if key not in ("CODEX_HOME", "QMCODE_HOME", "PYTHONPATH")
+        }
+        environment.update(
+            {
+                "HOME": str(self.home),
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": f"url.{self.repository.as_uri()}.insteadOf",
+                "GIT_CONFIG_VALUE_0": "https://github.com/synthetic/fixture.git",
+                "GIT_TERMINAL_PROMPT": "0",
+                "PYTHONPATH": str(INSTALLER.parent),
+            }
+        )
+        environment.update(overrides)
+        return environment
+
+    def run_installer(self, environment: dict[str, str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(INSTALLER),
+                "--repo",
+                "synthetic/fixture",
+                "--path",
+                "skill",
+                "--method",
+                "git",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=environment,
+        )
+
+    def test_installs_under_qmcode_home_when_no_home_variable_is_set(self) -> None:
+        result = self.run_installer(self.environment())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.home / ".qmcode" / "skills" / "skill" / "SKILL.md").is_file())
+        self.assertFalse((self.home / ".codex").exists())
+
+    def test_ignores_codex_home(self) -> None:
+        official_home = self.root / "official-codex-home"
+        result = self.run_installer(self.environment(CODEX_HOME=str(official_home)))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.home / ".qmcode" / "skills" / "skill" / "SKILL.md").is_file())
+        self.assertFalse(official_home.exists())
+        self.assertFalse((self.home / ".codex").exists())
+
+    def test_uses_qmcode_home_when_set(self) -> None:
+        qmcode_home = self.root / "custom-qmcode-home"
+        result = self.run_installer(self.environment(QMCODE_HOME=str(qmcode_home)))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((qmcode_home / "skills" / "skill" / "SKILL.md").is_file())
+        self.assertFalse((self.home / ".qmcode").exists())
+        self.assertFalse((self.home / ".codex").exists())
+
+    def test_list_skills_reads_installed_skills_from_qmcode_home(self) -> None:
+        lister = INSTALLER.parent / "list-skills.py"
+        probe = (
+            "import importlib.util, sys\n"
+            f"spec = importlib.util.spec_from_file_location('list_skills', {str(lister)!r})\n"
+            "module = importlib.util.module_from_spec(spec)\n"
+            "spec.loader.exec_module(module)\n"
+            "print(module._codex_home())\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-B", "-c", probe],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=self.environment(CODEX_HOME=str(self.root / "official-codex-home")),
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), str(self.home / ".qmcode"))
 
 
 if __name__ == "__main__":

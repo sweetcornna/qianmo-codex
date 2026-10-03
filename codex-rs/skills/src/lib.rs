@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): registers the Qianmo system-skills isolation tests.
 mod interface;
 mod invocation;
 mod loading;
@@ -187,6 +188,10 @@ impl SystemSkillsError {
         Self::Io { action, source }
     }
 }
+
+#[cfg(test)]
+#[path = "qianmo_system_skills_tests.rs"]
+mod qianmo_system_skills_tests;
 
 #[cfg(test)]
 mod tests {

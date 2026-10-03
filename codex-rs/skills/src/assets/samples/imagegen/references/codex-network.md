@@ -1,3 +1,4 @@
+<!-- Modified by Qianmo AgentNest Team (2026): paths and commands use $QMCODE_HOME (~/.qmcode) and qmcode. -->
 # Codex network approvals / sandbox notes
 
 This file is for the fallback CLI mode only. Read it when the user explicitly asks to use `scripts/image_gen.py` / CLI / API / model controls, or after the user explicitly confirms that a transparent-output request should use the `gpt-image-1.5` true-transparency fallback path.
@@ -17,7 +18,7 @@ If you trust the repo and want fewer prompts, use a configuration or profile tha
 - enables network for the sandbox mode you plan to use
 - sets an approval policy that matches your risk tolerance
 
-Example `~/.codex/config.toml` pattern:
+Example `~/.qmcode/config.toml` pattern:
 
 ```toml
 approval_policy = "on-request"

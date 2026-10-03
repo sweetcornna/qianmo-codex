@@ -1,3 +1,4 @@
+<!-- Modified by Qianmo AgentNest Team (2026): paths and commands use $QMCODE_HOME (~/.qmcode) and qmcode. -->
 # CLI reference (`scripts/image_gen.py`)
 
 This file is for the fallback CLI mode only. Read it when the user explicitly asks to use `scripts/image_gen.py` / CLI / API / model controls, or after the user explicitly confirms that a transparent-output request should use the `gpt-image-1.5` true-transparency fallback path.
@@ -13,11 +14,11 @@ The word `batch` in a user request is not CLI opt-in by itself.
 Real API calls require **network access** + `OPENAI_API_KEY`. `--dry-run` does not.
 
 ## Quick start (works from any repo)
-Set a stable path to the skill CLI (default `CODEX_HOME` is `~/.codex`):
+Set a stable path to the skill CLI (default `QMCODE_HOME` is `~/.qmcode`):
 
 ```
-export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-export IMAGE_GEN="$CODEX_HOME/skills/.system/imagegen/scripts/image_gen.py"
+export QMCODE_HOME="${QMCODE_HOME:-$HOME/.qmcode}"
+export IMAGE_GEN="$QMCODE_HOME/skills/.system/imagegen/scripts/image_gen.py"
 ```
 
 Install dependencies into that environment with its package manager. In uv-managed environments, `uv pip install ...` remains the preferred path.

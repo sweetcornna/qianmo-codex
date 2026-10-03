@@ -1,3 +1,4 @@
+<!-- Modified by Qianmo AgentNest Team (2026): commands use qmcode, not the official codex binary. -->
 # Local documentation MCP setup and diagnostics
 
 Use this route only when the user explicitly asks to configure or troubleshoot the official OpenAI documentation MCP server in a supported **local Codex client**. A missing documentation tool during an ordinary documentation request is not a setup request: answer with the root skill's official-domain web fallback without installation, sandbox escalation, configuration changes, or restart.
@@ -9,7 +10,7 @@ Use this route only when the user explicitly asks to configure or troubleshoot t
 3. When the current documentation supports it, the local Codex CLI setup is:
 
    ```sh
-   codex mcp add openaiDeveloperDocs --url https://developers.openai.com/mcp
+   qmcode mcp add openaiDeveloperDocs --url https://developers.openai.com/mcp
    ```
 
    The equivalent documented configuration is:

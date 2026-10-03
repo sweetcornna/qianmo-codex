@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Install a skill from a GitHub repo path into $CODEX_HOME/skills."""
+# Modified by Qianmo AgentNest Team (2026): default skills directory is $QMCODE_HOME/skills (~/.qmcode/skills), not the official Codex home.
+"""Install a skill from a GitHub repo path into $QMCODE_HOME/skills."""
 
 from __future__ import annotations
 
@@ -44,7 +45,9 @@ class InstallError(Exception):
 
 
 def _codex_home() -> str:
-    return os.environ.get("CODEX_HOME", os.path.expanduser("~/.codex"))
+    # Qianmo: qmcode keeps its state in QMCODE_HOME (default ~/.qmcode) and ignores
+    # CODEX_HOME, which belongs to the official Codex CLI.
+    return os.environ.get("QMCODE_HOME") or os.path.expanduser("~/.qmcode")
 
 
 def _tmp_root() -> str:
