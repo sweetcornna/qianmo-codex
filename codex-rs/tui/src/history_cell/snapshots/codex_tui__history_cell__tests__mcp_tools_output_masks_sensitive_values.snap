@@ -29,6 +29,7 @@ expression: rendered
     • Status: enabled
     • Auth: Unsupported
     • Command: qm handoff mcp
+    • Env: QMCODE_HOME=*****
     • Tools: (none)
     • Resources: (none)
     • Resource templates: (none)

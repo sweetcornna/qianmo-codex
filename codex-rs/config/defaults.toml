@@ -1,4 +1,4 @@
-# Modified by Qianmo AgentNest Team (2026): built-in qianmo handoff MCP server and notify hook; startup update check off.
+# Modified by Qianmo AgentNest Team (2026): built-in qianmo handoff MCP server (QMCODE_HOME passed through) and notify hook; startup update check off.
 # Fixed defaults for packaged Codex clients.
 include_permissions_instructions = true
 include_apps_instructions = true
@@ -24,7 +24,10 @@ notify = ["qm", "handoff", "sync", "--hook", "qmcode"]
 persistence = "save-all"
 
 # Qianmo handoff tools for the model. To turn them off, write the full table with
-# `enabled = false` in config.toml (see QIANMO.md).
+# `enabled = false` in config.toml (see QIANMO.md). MCP servers get a filtered
+# environment; pass QMCODE_HOME through so `qm handoff mcp` finds the sessions of a
+# custom state directory.
 [mcp_servers.qianmo]
 command = "qm"
 args = ["handoff", "mcp"]
+env_vars = ["QMCODE_HOME"]

@@ -56,7 +56,22 @@ async fn embedded_defaults_include_qianmo_handoff_entries() {
         Some(&TomlValue::Table(toml::toml! {
             command = "qm"
             args = ["handoff", "mcp"]
+            env_vars = ["QMCODE_HOME"]
         }))
+    );
+    // MCP servers start with a filtered environment; the typed config must forward
+    // QMCODE_HOME so `qm handoff mcp` sees a custom state directory.
+    let server: crate::McpServerConfig = table_entry(&config, &["mcp_servers", "qianmo"])
+        .expect("built-in qianmo MCP server")
+        .clone()
+        .try_into()
+        .expect("built-in qianmo MCP server parses");
+    let crate::McpServerTransportConfig::Stdio { env_vars, .. } = server.transport else {
+        panic!("built-in qianmo MCP server must use stdio");
+    };
+    assert_eq!(
+        env_vars,
+        vec![crate::McpServerEnvVar::Name("QMCODE_HOME".to_string())]
     );
     assert_eq!(
         table_entry(&config, &["check_for_update_on_startup"]),
@@ -81,12 +96,13 @@ enabled = false
         table_entry(&config, &["notify"]),
         Some(&string_array(&["my-notifier", "--flag"]))
     );
-    // Tables merge key by key: `command` and `args` still come from the built-in layer.
+    // Tables merge key by key: `command`, `args` and `env_vars` still come from the built-in layer.
     assert_eq!(
         table_entry(&config, &["mcp_servers", "qianmo"]),
         Some(&TomlValue::Table(toml::toml! {
             command = "qm"
             args = ["handoff", "mcp"]
+            env_vars = ["QMCODE_HOME"]
             enabled = false
         }))
     );
