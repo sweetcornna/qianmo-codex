@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): tests expect daemon auto-update to be off by default.
 use pretty_assertions::assert_eq;
 use tempfile::TempDir;
 
@@ -136,10 +137,11 @@ async fn telemetry_distinguishes_presence_from_default_values() -> anyhow::Resul
     let dir = home.path().join("app-server-daemon");
     tokio::fs::create_dir(&dir).await?;
     let path = dir.join("settings.json");
-    for (contents, presence) in [
-        ("{}", "default"),
+    for (contents, auto_update, presence) in [
+        ("{}", "disabled", "default"),
         (
             r#"{"updater":{"autoUpdateEnabled":true,"updateIntervalMinutes":60},"shutdownGraceSeconds":60}"#,
+            "enabled",
             "configured",
         ),
     ] {
@@ -148,8 +150,19 @@ async fn telemetry_distinguishes_presence_from_default_values() -> anyhow::Resul
             crate::telemetry::settings_tags(home.path())
                 .await
                 .map(|(_, value)| value),
-            ["enabled", presence, presence, presence]
+            [auto_update, presence, presence, presence]
         );
     }
     Ok(())
+}
+
+#[tokio::test]
+async fn auto_update_is_disabled_without_settings_file() {
+    let temp = TempDir::new().expect("temp dir");
+    let path = temp.path().join("settings.json");
+
+    let settings = DaemonSettings::load(&path).await.expect("load settings");
+
+    assert!(!settings.auto_update_enabled);
+    assert!(!DaemonSettings::default().auto_update_enabled);
 }

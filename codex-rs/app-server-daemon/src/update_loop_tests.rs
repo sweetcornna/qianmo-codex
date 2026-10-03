@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): tests that exercise the scheduled updater enable auto-update explicitly.
 use std::sync::Mutex;
 #[cfg(unix)]
 use std::time::Duration;
@@ -60,6 +61,12 @@ async fn explicit_update_migrates_running_and_stopped_installations() {
     for (running, local) in [(false, false), (true, false), (false, true), (true, true)] {
         let home = TempDir::new().unwrap();
         let (legacy, release) = manual_update_daemon(&home);
+        // Auto-update is off by default in this fork; the scheduled run below needs it on.
+        std::fs::write(
+            &legacy.settings_file,
+            r#"{"updater":{"autoUpdateEnabled":true}}"#,
+        )
+        .unwrap();
         let root = home.path().join("packages/standalone");
         if local {
             let package = root.join("releases/local-development");
@@ -419,6 +426,12 @@ async fn unsupported_request_preserves_updater_schedule() {
 
     let home = TempDir::new().expect("home");
     let (daemon, _) = manual_update_daemon(&home);
+    // Auto-update is off by default in this fork; this test needs the scheduled updater.
+    std::fs::write(
+        &daemon.settings_file,
+        r#"{"updater":{"autoUpdateEnabled":true}}"#,
+    )
+    .expect("enable auto-update");
     let daemon = std::sync::Arc::new(daemon);
     let identity = executable_identity(&daemon.managed_codex_bin)
         .await

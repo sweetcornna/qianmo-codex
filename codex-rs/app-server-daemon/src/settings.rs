@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): daemon auto-update is off by default so it never installs the upstream package.
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Duration;
@@ -29,7 +30,7 @@ impl Default for DaemonSettings {
         Self {
             remote_control_enabled: false,
             feature_overrides: BTreeMap::new(),
-            auto_update_enabled: true,
+            auto_update_enabled: false,
             update_interval_minutes: DEFAULT_UPDATE_INTERVAL_MINUTES,
             shutdown_grace_seconds: DEFAULT_SHUTDOWN_GRACE_SECONDS,
         }
@@ -85,7 +86,7 @@ impl Default for UpdaterSettings {
 }
 
 fn default_auto_update_enabled() -> bool {
-    true
+    false
 }
 
 fn default_update_interval_minutes() -> u32 {
