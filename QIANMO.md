@@ -46,8 +46,9 @@
 | `tui/src/status/helpers.rs` | 状态页 AGENTS.md 摘要用例的全局路径与内联快照改为 `~/.qmcode/AGENTS.md` | 显示路径跟随状态目录 |
 | `Cargo.lock` | 158 个工作区 crate 的 `version` 由 `0.0.0` 改为 `0.158.0`，其余不变 | 上游发行提交只改 `Cargo.toml` 的版本号，不提交这一步就无法 `--locked` 构建。这是 cargo 生成的文件，不加文件头：cargo 下次非 `--locked` 改写时会把注释行去掉 |
 | `../QIANMO.md`（新增） | 本文件 | 改动清单、合并步骤、构建方法 |
-| `../qianmo/build-linux.sh`（新增） | Linux 原生构建脚本 | 见第 6 节 |
-| `../.github/workflows/qianmo-build-linux.yml`（新增） | 手动触发的 Linux x86_64 构建 workflow | 见第 6 节 |
+| `../qianmo/build-linux.sh`（新增） | Linux 原生构建脚本：编 `qmcode` 与 `codex-code-mode-host` 两个 bin，都剥离、都出 `.debug`，放进同一个产物目录 | 见第 6、7 节 |
+| `../qianmo/fetch-rusty-v8.sh`（新增） | 下载并校验 `codex-code-mode-host` 链接的 V8 预编译库，打印 `RUSTY_V8_ARCHIVE`、`RUSTY_V8_SRC_BINDING_PATH` | 见第 6 节 |
+| `../.github/workflows/qianmo-build-linux.yml`（新增） | push `qianmo/build/**` 或手动触发的 Linux x86_64 构建 workflow | 见第 6 节 |
 
 ## 3. 刻意不改的部分
 
@@ -73,6 +74,7 @@
 - **Bazel**：`BUILD.bazel` 仍按 `codex` 命名。本 fork 只支持 cargo 构建。
 - **升级入口**：`qmcode update` 和 TUI 的升级提示仍指向官方包（npm `@openai/codex`、Homebrew、`chatgpt.com/codex/install.sh`）。P17.3 处理，见第 9 节。
 - **上游 workflow**：fork 上 Actions 已启用，上游的 29 个 workflow 都处于启用状态。push `qianmo/*` 分支不会触发任何上游 workflow（分支过滤只有 `main` 和 `**full-ci**`，分支名不要带 `full-ci`）；但下列操作会触发：push fork 的 `main`（`blocking-ci`、`postmerge-ci`）、fork 内开任何 PR（`blocking-ci`、`v8-canary`）、推 `rust-v*.*.*` 标签（`rust-release`，跑完还会经 `workflow_run` 带起 `python-sdk-cli-release`；`rusty-v8-v*`、`codex-zsh-v*` 同理）。`cla`、`issue-*`、`close-stale-contributor-prs`、`python-sdk-release` 有 `openai/codex` 仓库判断，在 fork 上触发后跳过。runner 写成 `${{ github.event.repository.name }}-*` 的 job 在 fork 上解析为 `qianmo-codex-*` 自定义 runner，和 `macos-15-xlarge` 的 job 一样开跑即失败，不会排队（2026-09-29 push `main` 的两次运行实测如此）。**不要把上游标签推到 fork**；构建脚本也不依赖标签。是否在 fork 的 Actions 设置里停用这些 workflow，待负责人定（第 9 节）。
+- **Linux 沙箱依赖系统 `bwrap`**：产物不带 bubblewrap。qmcode 先找 `PATH` 上支持 `--perms` 的 `bwrap`，再找可执行文件旁的 `codex-resources/bwrap` 或 `bwrap`（`linux-sandbox/src/launcher.rs`）。都没有时，`read-only`、`workspace-write` 下的命令全部失败（`bubblewrap is unavailable`），`features.use_legacy_landlock` 也不能绕过（`filesystem-restricted execution requires bubblewrap`）；只有 `danger-full-access` 能跑命令。2026-10-03 在未装 bubblewrap 的 Debian 13 节点上实测如此。上游 release 另编 `--bin bwrap`（需要 `libcap-dev`）并把摘要编进二进制，本 fork 没做。
 - **用户钥匙串与插件服务**：`user-verification` 按账号区分钥匙串标签，锁文件在 `~/Library/Application Support/com.openai.codex/`。MCP OAuth 默认存钥匙串（`mcp_oauth_credentials_store = "auto"`），非 Windows 上默认走 direct 后端，条目 service 是 `Codex MCP Credentials`，account 由 MCP 服务器名和 URL 的哈希构成，不含状态目录。两边配置了同名、同 URL 的 MCP 服务器，或登录同一账号时，会读到同一条目。ChatGPT/API 登录凭据不受影响。
 
 ## 5. 合并上游
@@ -113,12 +115,20 @@
 
 ## 6. 构建
 
+产物是两个程序，必须放在同一目录、辅助程序不改名：
+
+- `qmcode`：入口。
+- `codex-code-mode-host`：code mode 的执行进程。内置模型目录里 `tool_mode` 为 `code_mode_only` 的模型（`gpt-6-luna`、gpt-6 / gpt-5.6 系列）的每次工具调用都经它执行；找不到它时工具调用直接失败，不回退普通工具。qmcode 查找它的顺序（`install-context/src/lib.rs` 的 `code_mode_host_program`）：包布局 `<包>/codex-resources/`（`<包>/bin/` 下的可执行文件且有 `<包>/codex-package.json`），或 `$QMCODE_HOME/packages/standalone/releases/<版本>/codex-resources/`；否则 qmcode 可执行文件所在目录（取 `current_exe()` 的父目录，Linux 上已解析软链接，所以经软链接调用时找的是真实文件旁边）。没有环境变量或配置项能另指路径。
+
+`codex-code-mode-host` 链接 V8（`v8 = =150.4.0`，开 `v8_enable_sandbox`）。v8 的构建脚本默认去 denoland/rusty_v8 下 `ptrcomp_sandbox` 变体的预编译库，那边不发布这个变体，cargo 直接失败。`qianmo/fetch-rusty-v8.sh <目标三元组> [目录]` 照上游 `.github/actions/setup-rusty-v8` 的做法，从上游 `openai/codex` 的 `rusty-v8-v<版本>` 发行下载预编译库与绑定，用仓库内 `third_party/v8/rusty_v8_<版本>_release_manifests.sha256` 校验清单、再逐文件校验，最后打印两个环境变量。目录缺省为 `codex-rs/target/qianmo-rusty-v8`，已有文件校验通过就不重下。需要 `curl` 和 python3 ≥ 3.11。qmcode 本身不链接 V8。
+
 本机（macOS，自测用，不作为发布产物；macOS 上不交叉编译 Linux）：
 
 ```sh
+export $(qianmo/fetch-rusty-v8.sh aarch64-apple-darwin)
 cd codex-rs
-cargo build --release --bin qmcode
-# 产物：codex-rs/target/release/qmcode
+cargo build --release --locked --bin qmcode --bin codex-code-mode-host
+# 产物：codex-rs/target/release/qmcode、codex-rs/target/release/codex-code-mode-host
 ```
 
 Linux 发布产物**以 GitHub Actions 为主**：workflow `.github/workflows/qianmo-build-linux.yml` 有两种触发：push 任何 `qianmo/build/**` 分支（不需要改默认分支，日常用这个），或手动 `workflow_dispatch`（可选输入 `ref`，要求文件在默认分支上）。它在 `ubuntu-24.04`（x86_64）上执行：
@@ -127,7 +137,7 @@ Linux 发布产物**以 GitHub Actions 为主**：workflow `.github/workflows/qi
 2. 用 apt 装 `build-essential pkg-config libssl-dev`；
 3. 用 rustup 装 `rust-toolchain.toml` 钉的工具链；
 4. 执行 `qianmo/build-linux.sh`；
-5. 用 `actions/upload-artifact` 上传产物（已剥离）、`.debug`（调试符号）、`.sha256`、`.buildinfo`（含编译秒数）、`.build.log`，保留 30 天；构建失败时单独上传日志。
+5. 用 `actions/upload-artifact` 把产物目录里的 7 个文件（两个已剥离的程序、两个 `.debug`、`.sha256`、`.buildinfo`、`.build.log`，见第 7 节）作为一个 artifact 上传，保留 30 天；构建失败时单独上传日志。
 
 第三方 action 都钉完整的提交 sha。触发方式：
 
@@ -137,7 +147,7 @@ gh workflow run qianmo-build-linux.yml --repo sweetcornna/qianmo-codex --ref <�
 
 日常触发：`git push origin <要构建的提交>:refs/heads/qianmo/build/<名字>`，构建的就是这个分支的头提交。
 
-注意：GitHub 文档写明 `workflow_dispatch`「只在 workflow 文件位于默认分支时接收事件」。fork 的默认分支目前是 `main`（纯镜像，没有这个文件），所以要先把默认分支设为 `qianmo/main` 才能触发（待负责人定，见第 9 节）。`--ref` 决定用哪个分支上的 workflow 文件和源码；要构建别的分支、标签或提交，加 `-f ref=…`。artifact 下载后是 zip，解压出的二进制没有执行位，先用 `sha256sum -c <名字>.sha256` 核对，再 `chmod +x`。
+注意：GitHub 文档写明 `workflow_dispatch`「只在 workflow 文件位于默认分支时接收事件」。fork 的默认分支目前是 `main`（纯镜像，没有这个文件），所以要先把默认分支设为 `qianmo/main` 才能触发（待负责人定，见第 9 节）。`--ref` 决定用哪个分支上的 workflow 文件和源码；要构建别的分支、标签或提交，加 `-f ref=…`。artifact 下载后是 zip，解压出的二进制没有执行位，先用 `sha256sum -c <名字>.sha256` 核对，再对 `<名字>` 和 `codex-code-mode-host` 都 `chmod +x`。部署时两个程序放同一目录，`codex-code-mode-host` 不改名；一个版本一个目录，不要让不同版本的 qmcode 共用一个 `codex-code-mode-host`。
 
 **备选**：在任意 Linux 主机（x86_64 或 aarch64）上直接执行脚本；aarch64 产物在 aarch64 机器上编。机器内存不足（例如 1–2 GB 的节点）时编不动，不要在这类机器上编：
 
@@ -145,18 +155,29 @@ gh workflow run qianmo-build-linux.yml --repo sweetcornna/qianmo-codex --ref <�
 qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/qianmo-dist
 ```
 
-脚本按 `codex-rs/rust-toolchain.toml` 钉的工具链（缺失时用 rustup 装 minimal profile）执行 `cargo build --release --locked --bin qmcode`，然后核对：构建前后 `Cargo.lock` 不变、`sha256sum -c` 通过、ELF 架构与本机一致（有 `readelf` 时）、`--version` 末行恰为 `qmcode <工作区版本>`、在临时 `HOME` 下只生成 `.qmcode`。有已跟踪文件未提交时拒绝构建，除非设 `QMCODE_ALLOW_DIRTY=1`。
+脚本按 `codex-rs/rust-toolchain.toml` 钉的工具链（缺失时用 rustup 装 minimal profile），先用 `qianmo/fetch-rusty-v8.sh` 取本机目标的 V8 预编译库，再执行 `cargo build --release --locked --bin qmcode --bin codex-code-mode-host`，然后核对：构建前后 `Cargo.lock` 不变、`sha256sum -c` 通过、两个程序的 ELF 架构都与本机一致（有 `readelf` 时）、`codex-code-mode-host --help` 能运行、`--version` 末行恰为 `qmcode <工作区版本>`、在临时 `HOME` 下只生成 `.qmcode`。有已跟踪文件未提交时拒绝构建，除非设 `QMCODE_ALLOW_DIRTY=1`。
 
 ## 7. 产物命名
 
-`qmcode-<上游标签>-<短提交>-<架构>`，例如 `qmcode-rust-v0.158.0-0123456789-x86_64`。
+`qmcode-<上游标签>-<短提交>-<架构>`，例如 `qmcode-rust-v0.158.0-0123456789-x86_64`，下称「名字」。它同时是产物目录名（脚本写到 `<输出目录>/<名字>/`，每次构建先清空这个目录；Actions artifact 也叫这个名字）和 qmcode 程序的文件名。
 
 - 上游标签：`rust-v` 加 `codex-rs/Cargo.toml` 的 `[workspace.package] version`（上游发行提交里两者一致）。不依赖 git 标签，因为 fork 上不放上游标签；本地有这个标签时，脚本会核对 HEAD 包含它。工作区版本是 `0.0.0`（上游 `main`，不是发行标签）时拒绝构建。
 - 短提交：`git rev-parse --short=10 HEAD`，固定 10 位，不随仓库对象数变化。
 - 架构：`x86_64` 或 `aarch64`。
 - 工作区有未提交改动且设了 `QMCODE_ALLOW_DIRTY=1` 时，加后缀 `-dirty`。
-- 产物是剥离过的部署二进制；调试符号在 `<名字>.debug`，经 `.gnu_debuglink` 关联（上游 release 配置 `strip = false`、留给打包剥离，这里照同样的拆法做）。首次未剥离的产物 1.38 GB，部署不用它。
-- 同目录附带 `<名字>.sha256`（`sha256sum` 格式，含产物与 `.debug` 两行）、`<名字>.buildinfo`（标签、完整提交、工具链、主机、起止时间、编译秒数、sha256、字节数）、`<名字>.build.log`（cargo 完整输出）。
+- 产物目录里的 7 个文件：
+
+  | 文件 | 内容 |
+  |---|---|
+  | `<名字>` | qmcode，已剥离 |
+  | `<名字>.debug` | qmcode 的调试符号，经 `.gnu_debuglink` 关联 |
+  | `codex-code-mode-host` | 辅助程序，已剥离；**不改名**，qmcode 按这个名字在自己所在目录找它 |
+  | `codex-code-mode-host.debug` | 辅助程序的调试符号 |
+  | `<名字>.sha256` | `sha256sum` 格式，上面 4 个文件各一行 |
+  | `<名字>.buildinfo` | 标签、完整提交、工具链、主机、起止时间、编译秒数，两个程序的 sha256 与字节数，V8 预编译库文件名 |
+  | `<名字>.build.log` | cargo 完整输出 |
+
+- 剥离的做法：上游 release 配置 `strip = false`、留给打包剥离，这里照同样的拆法做。首次未剥离的 qmcode 1.38 GB，部署不用它。
 
 ## 8. 合并记录
 
@@ -171,3 +192,4 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
 | 关闭 qmcode 的启动升级检查与升级提示，避免引导用户装回官方包（`check_for_update_on_startup` 等） | P17.3（与 `config/defaults.toml` 内置项一起改） | 未做 |
 | fork 默认分支改为 `qianmo/main`，使 `qianmo-build-linux` 也可手动触发（push `qianmo/build/**` 已可触发，非必需） | 负责人 | 待定 |
 | 是否在 fork 的 Actions 设置里停用会被自动触发的上游 workflow（第 4 节） | 负责人 | 待定 |
+| Linux 产物是否加编 `bwrap`（第 4 节「Linux 沙箱依赖系统 `bwrap`」）。节点要用 `read-only`、`workspace-write` 沙箱时需要；P17.5 节点桥按计划用 `danger-full-access`，不需要 | 负责人 | 待定 |

@@ -1,8 +1,9 @@
 # Copyright 2026 Qianmo AgentNest Team
 # SPDX-License-Identifier: Apache-2.0
 #
-# Build the qmcode release binary for Linux x86_64 with qianmo/build-linux.sh
-# and upload it with its sha256, build info (including build seconds), and log.
+# Build qmcode and its code-mode helper (codex-code-mode-host) for Linux x86_64
+# with qianmo/build-linux.sh and upload both, with their debug symbols, sha256,
+# build info (including build seconds), and log, as one artifact directory.
 # Triggered by pushing a branch under qianmo/build/ (works without changing the
 # fork's default branch), or manually once this file is on the default branch.
 # See QIANMO.md section 6.
@@ -49,7 +50,9 @@ jobs:
           # libssl-dev); bundled C dependencies (sqlite, zstd, aws-lc) need a C
           # toolchain. libcap-dev and libasound2-dev from the upstream jobs are
           # only needed for codex-bwrap and voice crates, which qmcode does not
-          # build.
+          # build. codex-code-mode-host links a verified V8 prebuilt that
+          # qianmo/fetch-rusty-v8.sh downloads with curl and python3 (both
+          # preinstalled on the runner).
           sudo apt-get update -y
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev
@@ -67,7 +70,7 @@ jobs:
         shell: bash
         run: df -h / "${GITHUB_WORKSPACE}"
 
-      - name: Build qmcode
+      - name: Build qmcode and codex-code-mode-host
         shell: bash
         run: qianmo/build-linux.sh "${QIANMO_DIST}"
 
@@ -82,7 +85,8 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          buildinfo=("${QIANMO_DIST}"/qmcode-*.buildinfo)
+          # build-linux.sh writes one directory per build: QIANMO_DIST/NAME/.
+          buildinfo=("${QIANMO_DIST}"/qmcode-*/qmcode-*.buildinfo)
           if [[ ${#buildinfo[@]} -ne 1 ]]; then
             echo "expected exactly one buildinfo file, found ${#buildinfo[@]}" >&2
             exit 1
@@ -103,11 +107,13 @@ jobs:
         with:
           name: ${{ steps.dist.outputs.name }}
           path: |
-            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}
-            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.debug
-            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.sha256
-            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.buildinfo
-            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.build.log
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}/${{ steps.dist.outputs.name }}
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}/${{ steps.dist.outputs.name }}.debug
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}/codex-code-mode-host
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}/codex-code-mode-host.debug
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}/${{ steps.dist.outputs.name }}.sha256
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}/${{ steps.dist.outputs.name }}.buildinfo
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}/${{ steps.dist.outputs.name }}.build.log
           if-no-files-found: error
           retention-days: 30
 
@@ -116,6 +122,6 @@ jobs:
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: qmcode-build-log-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.QIANMO_DIST }}/*.build.log
+          path: ${{ env.QIANMO_DIST }}/*/*.build.log
           if-no-files-found: ignore
           retention-days: 30

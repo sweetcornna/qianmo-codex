@@ -2,19 +2,31 @@
 # Copyright 2026 Qianmo AgentNest Team
 # SPDX-License-Identifier: Apache-2.0
 #
-# Build qmcode natively on a Linux host (x86_64 or aarch64). Never cross-compile
-# from macOS: build aarch64 artifacts on an aarch64 machine. The GitHub Actions
-# workflow .github/workflows/qianmo-build-linux.yml runs this script.
+# Build qmcode and its code-mode helper natively on a Linux host (x86_64 or
+# aarch64). Never cross-compile from macOS: build aarch64 artifacts on an
+# aarch64 machine. The GitHub Actions workflow
+# .github/workflows/qianmo-build-linux.yml runs this script.
 #
 # Usage: qianmo/build-linux.sh [output-dir]
 #   output-dir defaults to codex-rs/target/qianmo-dist (ignored by git).
 #
-# Writes to output-dir, with NAME = qmcode-<upstream tag>-<short commit>-<arch>:
-#   NAME             the release binary, stripped (the deployable artifact)
-#   NAME.debug       its debug symbols, linked back with .gnu_debuglink
-#   NAME.sha256      `sha256sum` lines for NAME and NAME.debug
-#   NAME.buildinfo   tag, commit, toolchain, host, build seconds, sha256, size
-#   NAME.build.log   full cargo output
+# Writes one directory per build, output-dir/NAME, with
+# NAME = qmcode-<upstream tag>-<short commit>-<arch>:
+#   NAME                        qmcode, stripped (the deployable entrypoint)
+#   NAME.debug                  its debug symbols, linked with .gnu_debuglink
+#   codex-code-mode-host        the code-mode helper, stripped. Keep this name
+#                               and keep it in the same directory as qmcode:
+#                               qmcode looks for exactly this file next to its
+#                               own (symlink-resolved) executable
+#   codex-code-mode-host.debug  the helper's debug symbols
+#   NAME.sha256                 `sha256sum` lines for the four files above
+#   NAME.buildinfo              tag, commit, toolchain, host, build seconds,
+#                               sha256 and size of both binaries
+#   NAME.build.log              full cargo output
+#
+# Models whose catalog entry uses code mode (gpt-6-luna is code_mode_only) run
+# every tool call through codex-code-mode-host and fail closed without it. The
+# helper links V8; qianmo/fetch-rusty-v8.sh provides the verified prebuilt.
 #
 # The upstream tag is rust-v<workspace version from codex-rs/Cargo.toml>, so the
 # script works in clones without upstream tags (the fork does not carry them:
@@ -39,7 +51,7 @@ case "$(uname -m)" in
   *) die "unsupported architecture: $(uname -m)" ;;
 esac
 
-for tool in git rustup sha256sum objcopy; do
+for tool in git rustup sha256sum objcopy curl python3; do
   command -v "${tool}" >/dev/null 2>&1 || die "${tool} not found"
 done
 
@@ -47,7 +59,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 codex_rs="${repo_root}/codex-rs"
 target_dir="${CARGO_TARGET_DIR:-${codex_rs}/target}"
 [[ "${target_dir}" == /* ]] || target_dir="${codex_rs}/${target_dir}"
-out_dir="${1:-${codex_rs}/target/qianmo-dist}"
+out_root="${1:-${codex_rs}/target/qianmo-dist}"
+helper="codex-code-mode-host"
 
 toolchain="$(sed -n 's/^channel *= *"\(.*\)"$/\1/p' "${codex_rs}/rust-toolchain.toml")"
 [[ -n "${toolchain}" ]] || die "cannot read channel from codex-rs/rust-toolchain.toml"
@@ -75,8 +88,12 @@ if [[ -n "${dirty_paths}" ]]; then
 fi
 
 name="qmcode-${upstream_tag}-${short_commit}-${arch}${suffix}"
+mkdir -p "${out_root}"
+out_dir="$(cd "${out_root}" && pwd)/${name}"
+# A fresh directory per build: an older qmcode must never pick up a newer
+# helper left in a shared directory.
+rm -rf -- "${out_dir}"
 mkdir -p "${out_dir}"
-out_dir="$(cd "${out_dir}" && pwd)"
 log="${out_dir}/${name}.build.log"
 
 if ! rustup run "${toolchain}" rustc --version >/dev/null 2>&1; then
@@ -84,13 +101,22 @@ if ! rustup run "${toolchain}" rustc --version >/dev/null 2>&1; then
   rustup toolchain install "${toolchain}" --profile minimal
 fi
 rustc_version="$(rustup run "${toolchain}" rustc --version)"
+rust_target="$(rustup run "${toolchain}" rustc -vV | sed -n 's/^host: //p')"
+[[ -n "${rust_target}" ]] || die "cannot read the host target triple from rustc -vV"
 
-echo "build-linux: building ${name} with ${rustc_version}"
+v8_env="$("${repo_root}/qianmo/fetch-rusty-v8.sh" "${rust_target}")"
+RUSTY_V8_ARCHIVE="$(sed -n 's/^RUSTY_V8_ARCHIVE=//p' <<<"${v8_env}")"
+RUSTY_V8_SRC_BINDING_PATH="$(sed -n 's/^RUSTY_V8_SRC_BINDING_PATH=//p' <<<"${v8_env}")"
+[[ -f "${RUSTY_V8_ARCHIVE}" && -f "${RUSTY_V8_SRC_BINDING_PATH}" ]] ||
+  die "fetch-rusty-v8.sh did not provide the V8 archive and binding"
+export RUSTY_V8_ARCHIVE RUSTY_V8_SRC_BINDING_PATH
+
+echo "build-linux: building ${name} (qmcode + ${helper}) with ${rustc_version}"
 echo "build-linux: cargo output goes to ${log}"
 start_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 start_epoch="$(date -u +%s)"
-if ! (cd "${codex_rs}" && rustup run "${toolchain}" cargo build --release --locked --bin qmcode) \
-  >"${log}" 2>&1; then
+if ! (cd "${codex_rs}" && rustup run "${toolchain}" cargo build --release --locked \
+  --bin qmcode --bin "${helper}") >"${log}" 2>&1; then
   tail -n 40 "${log}" >&2
   die "cargo build failed; see ${log}"
 fi
@@ -102,21 +128,28 @@ build_seconds=$((end_epoch - start_epoch))
 git -C "${repo_root}" diff --quiet -- codex-rs/Cargo.lock ||
   die "codex-rs/Cargo.lock changed during a --locked build"
 
-binary="${target_dir}/release/qmcode"
-[[ -x "${binary}" ]] || die "expected binary not found: ${binary}"
-install -m 0755 "${binary}" "${out_dir}/${name}"
+for pair in "qmcode:${name}" "${helper}:${helper}"; do
+  binary="${target_dir}/release/${pair%%:*}"
+  [[ -x "${binary}" ]] || die "expected binary not found: ${binary}"
+  install -m 0755 "${binary}" "${out_dir}/${pair#*:}"
+done
 # The upstream release profile keeps symbols (strip = false) and leaves
-# stripping to packaging. Ship a stripped binary and keep the symbols in a
-# sidecar linked by .gnu_debuglink, the same split upstream packaging makes.
+# stripping to packaging. Ship stripped binaries and keep the symbols in
+# sidecars linked by .gnu_debuglink, the same split upstream packaging makes.
 (
   cd "${out_dir}"
-  objcopy --only-keep-debug "${name}" "${name}.debug"
-  chmod 0644 "${name}.debug"
-  objcopy --strip-all --add-gnu-debuglink="${name}.debug" "${name}"
+  for file in "${name}" "${helper}"; do
+    objcopy --only-keep-debug "${file}" "${file}.debug"
+    chmod 0644 "${file}.debug"
+    objcopy --strip-all --add-gnu-debuglink="${file}.debug" "${file}"
+  done
 )
-(cd "${out_dir}" && sha256sum "${name}" "${name}.debug" >"${name}.sha256")
-sha256="$(head -n 1 "${out_dir}/${name}.sha256" | cut -d' ' -f1)"
+(cd "${out_dir}" && sha256sum "${name}" "${name}.debug" "${helper}" "${helper}.debug" \
+  >"${name}.sha256")
+sha256="$(sed -n "s/^\([0-9a-f]*\)  ${name}\$/\1/p" "${out_dir}/${name}.sha256")"
 size_bytes="$(wc -c <"${out_dir}/${name}" | tr -d ' ')"
+helper_sha256="$(sed -n "s/^\([0-9a-f]*\)  ${helper}\$/\1/p" "${out_dir}/${name}.sha256")"
+helper_size_bytes="$(wc -c <"${out_dir}/${helper}" | tr -d ' ')"
 
 cat >"${out_dir}/${name}.buildinfo" <<EOF
 name=${name}
@@ -132,24 +165,35 @@ end_utc=${end_utc}
 build_seconds=${build_seconds}
 sha256=${sha256}
 size_bytes=${size_bytes}
+code_mode_host=${helper}
+code_mode_host_sha256=${helper_sha256}
+code_mode_host_size_bytes=${helper_size_bytes}
+rusty_v8_archive=$(basename "${RUSTY_V8_ARCHIVE}")
 EOF
 
-# Verify the artifact: checksum, ELF architecture, version, and that under a
-# throwaway HOME it creates nothing but HOME/.qmcode (never HOME/.codex). The
-# binary refuses to create its helper directory under $TMPDIR, so an output
-# directory inside $TMPDIR legitimately leaves HOME empty.
+# Verify the artifact: checksums, ELF architecture of both binaries, that the
+# helper runs, the version, and that under a throwaway HOME qmcode creates
+# nothing but HOME/.qmcode (never HOME/.codex). The binary refuses to create
+# its helper directory under $TMPDIR, so an output directory inside $TMPDIR
+# legitimately leaves HOME empty.
 (cd "${out_dir}" && sha256sum -c "${name}.sha256")
 
 if command -v readelf >/dev/null 2>&1; then
-  machine="$(readelf -h "${out_dir}/${name}" | sed -n 's/^ *Machine: *//p')"
-  case "${arch}:${machine}" in
-    x86_64:*X86-64* | aarch64:*AArch64*) ;;
-    *) die "ELF machine '${machine}' does not match ${arch}" ;;
-  esac
-  echo "build-linux: ELF machine ${machine}"
+  for file in "${name}" "${helper}"; do
+    machine="$(readelf -h "${out_dir}/${file}" | sed -n 's/^ *Machine: *//p')"
+    case "${arch}:${machine}" in
+      x86_64:*X86-64* | aarch64:*AArch64*) ;;
+      *) die "ELF machine '${machine}' of ${file} does not match ${arch}" ;;
+    esac
+    echo "build-linux: ${file}: ELF machine ${machine}"
+  done
 else
   echo "build-linux: readelf not found; skipped ELF architecture check"
 fi
+
+helper_help="$("${out_dir}/${helper}" --help 2>&1)" || die "${helper} --help failed: ${helper_help}"
+grep -q -- '--listen' <<<"${helper_help}" || die "unexpected ${helper} --help output: ${helper_help}"
+echo "build-linux: ${helper} --help runs"
 
 verify_home="$(mktemp -d "${out_dir}/.verify-home.XXXXXX")"
 trap 'rm -rf -- "${verify_home}"' EXIT
@@ -168,3 +212,5 @@ esac
 echo "build-linux: ${version_line}"
 echo "build-linux: ${out_dir}/${name}"
 echo "build-linux: sha256 ${sha256}, ${size_bytes} bytes, built in ${build_seconds}s"
+echo "build-linux: ${out_dir}/${helper}"
+echo "build-linux: sha256 ${helper_sha256}, ${helper_size_bytes} bytes"
