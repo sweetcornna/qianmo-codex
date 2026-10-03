@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 //! Reports app-server daemon state without starting or stopping the daemon.
 //!
 //! The background-server check is deliberately passive. It reads the daemon
@@ -97,7 +98,7 @@ pub(super) async fn background_server_check(config: &Config) -> DoctorCheck {
     )
     .details(details);
     if status.check_status() == CheckStatus::Warning {
-        check = check.remediation("Run codex app-server daemon version for more details.");
+        check = check.remediation("Run qmcode app-server daemon version for more details.");
     }
     check
 }

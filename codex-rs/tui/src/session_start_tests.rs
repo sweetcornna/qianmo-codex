@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): archived-session guidance test covers `qmcode unarchive` and `codex unarchive`.
 use super::*;
 use crate::legacy_core::config::ConfigBuilder;
 use app_test_support::create_fake_rollout;
@@ -195,18 +196,20 @@ fn session_start_error_surfaces_archived_guidance_without_rollout_path() {
         cwd: None,
         history_mode: None,
     };
-    let expected = format!(
-        "session {thread_id} is archived. Run `codex unarchive {thread_id}` to unarchive it first."
-    );
-
-    for action in ["resume", "fork"] {
-        let err = color_eyre::eyre::eyre!(
-            "thread/{action} failed during TUI bootstrap: thread/{action} failed: {expected} (code -32600)"
+    for command in ["qmcode", "codex"] {
+        let expected = format!(
+            "session {thread_id} is archived. Run `{command} unarchive {thread_id}` to unarchive it first."
         );
 
-        assert_eq!(
-            session_start_error(action, &target_session, err).to_string(),
-            expected
-        );
+        for action in ["resume", "fork"] {
+            let err = color_eyre::eyre::eyre!(
+                "thread/{action} failed during TUI bootstrap: thread/{action} failed: {expected} (code -32600)"
+            );
+
+            assert_eq!(
+                session_start_error(action, &target_session, err).to_string(),
+                expected
+            );
+        }
     }
 }

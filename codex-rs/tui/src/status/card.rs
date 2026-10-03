@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): the /status card title is qmcode.
+// Modified by Qianmo AgentNest Team (2026): the /status card title is qmcode; user-visible command names and paths use qmcode and ~/.qmcode.
 use crate::history_cell::CompositeHistoryCell;
 use crate::history_cell::HistoryCell;
 use crate::history_cell::PlainHistoryCell;
@@ -755,7 +755,7 @@ impl StatusHistoryCell {
                 (None, None) => "ChatGPT".to_string(),
             },
             StatusAccountDisplay::ApiKey => {
-                "API key configured (run codex login to use ChatGPT)".to_string()
+                "API key configured (run qmcode login to use ChatGPT)".to_string()
             }
         });
 

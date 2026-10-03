@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use super::super::bedrock_auth::BedrockProviderConfig;
 use super::super::bedrock_auth::configure_bedrock_provider;
 use super::super::bedrock_auth::ensure_user_model_provider_can_be_bedrock;
@@ -78,7 +79,7 @@ impl AccountRequestProcessor {
             )
         {
             return Err(invalid_request(
-                "Codex-managed Bedrock credentials are already configured and take priority over AWS environment credentials. Run `codex logout` and try again.",
+                "Codex-managed Bedrock credentials are already configured and take priority over AWS environment credentials. Run `qmcode logout` and try again.",
             ));
         }
 

@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 //! Daemon-wide overview of recent and locally retained sessions and their subagents.
 //! Tasks owned by another app server open as frozen, read-only history snapshots.
 //! Only the immediate attachment of a dashboard-created task is treated as fresh.
@@ -97,7 +98,7 @@ impl App {
                     (!workload_identity_selected).then(|| SelectionItem {
                         name: "Start background server".to_string(),
                         description: Some(
-                            "Open `codex agents` in another terminal afterward".to_string(),
+                            "Open `qmcode agents` in another terminal afterward".to_string(),
                         ),
                         actions: vec![Box::new(|tx| tx.send(AppEvent::StartAgentsDaemon))],
                         dismiss_on_select: true,

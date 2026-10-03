@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): test expectations follow the qmcode command names in user-visible messages.
 use super::*;
 use codex_app_server_protocol::JSONRPCErrorError;
 use codex_app_server_protocol::ThreadBackgroundTerminalsListResponse;
@@ -29,7 +30,7 @@ fn old_local_daemon_worktree_error_suggests_update() -> Result<()> {
     let cell = crate::history_cell::new_error_event(message.to_string());
     insta::assert_snapshot!(
         lines_to_single_string(&cell.display_lines(/*width*/ 120)),
-        @"■ The local Codex service cannot check background terminals. Run `codex app-server daemon update`, then restart Codex."
+        @"■ The local Codex service cannot check background terminals. Run `qmcode app-server daemon update`, then restart Codex."
     );
     assert_eq!(
         managed_worktree_creation::background_terminals_blocker(

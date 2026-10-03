@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): test expectations follow the qmcode command names in user-visible messages.
 use anyhow::Result;
 use app_test_support::ChatGptAuthFixture;
 use app_test_support::MockResponsesConfig;
@@ -2961,7 +2962,7 @@ async fn thread_resume_rejects_archived_session_by_id() -> Result<()> {
     assert!(
         message.contains(&format!("session {conversation_id} is archived"))
             && message.contains(&format!(
-                "codex unarchive {conversation_id}` to unarchive it first"
+                "qmcode unarchive {conversation_id}` to unarchive it first"
             )),
         "unexpected resume error: {message}"
     );

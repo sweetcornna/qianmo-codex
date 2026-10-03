@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use super::super::CheckStatus;
 use super::super::DoctorCheck;
 use super::platform::desktop_check;
@@ -180,7 +181,7 @@ fn enforcement_check(gatekeeper: Evidence, events: Evidence) -> DoctorCheck {
         (
             CheckStatus::Warning,
             "recent macos security enforcement history was unavailable",
-            "check access to macos unified security logs and rerun codex doctor",
+            "check access to macos unified security logs and rerun qmcode doctor",
         )
     } else {
         return desktop_check(

@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 //! Queue user messages through a local or remote app server.
 
 use crate::app_server_session::AppServerSession;
@@ -31,7 +32,7 @@ pub async fn run_session_queue_command(
 ) -> Result<String> {
     if options.cli.no_daemon && options.explicit_remote_endpoint.is_none() {
         return Err(eyre!(
-            "--no-daemon cannot be used with codex queue. Queuing must discover the shared server to avoid writing through a separate server."
+            "--no-daemon cannot be used with qmcode queue. Queuing must discover the shared server to avoid writing through a separate server."
         ));
     }
     let codex_home = find_codex_home().wrap_err("failed to find Codex home")?;

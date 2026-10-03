@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use crate::config_manager::ConfigManager;
 use std::sync::Arc;
 
@@ -279,7 +280,7 @@ impl ThreadQueueRequestProcessor {
                 })?;
             if stored.archived_at.is_some() {
                 return Err(invalid_request(format!(
-                    "session {thread_id} is archived. Run `codex unarchive {thread_id}` to unarchive it first."
+                    "session {thread_id} is archived. Run `qmcode unarchive {thread_id}` to unarchive it first."
                 )));
             }
             (None, stored.source)

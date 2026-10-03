@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 //! Regression coverage for conflict diagnostics and validation pass ordering.
 
 use super::RuntimeKeymap;
@@ -30,7 +31,7 @@ fn conflicting_contexts_report_the_first_conflict_in_validation_order() {
             RuntimeKeymap::from_config(&keymap).expect_err("expected binding conflict"),
             format!(
                 "Ambiguous `tui.keymap.{context}` bindings: `{first}` and `{second}` use the same key. \
-Set unique keys in `~/.codex/config.toml` and retry. \
+Set unique keys in `~/.qmcode/config.toml` and retry. \
 See the Codex keymap documentation for supported actions and examples."
             )
         );

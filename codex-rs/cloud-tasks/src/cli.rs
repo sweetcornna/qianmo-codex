@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use clap::Args;
 use clap::Parser;
 use codex_utils_cli::CliConfigOverrides;
@@ -32,7 +33,7 @@ pub struct ExecCommand {
     #[arg(value_name = "QUERY")]
     pub query: Option<String>,
 
-    /// Target environment identifier (see `codex cloud` to browse).
+    /// Target environment identifier (see `qmcode cloud` to browse).
     #[arg(long = "env", value_name = "ENV_ID")]
     pub environment: String,
 

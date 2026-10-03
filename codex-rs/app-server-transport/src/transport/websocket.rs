@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use super::CHANNEL_CAPACITY;
 use super::ConnectionOrigin;
 use super::TransportEvent;
@@ -55,7 +56,7 @@ fn colorize(text: &str, style: Style) -> String {
 
 #[allow(clippy::print_stderr)]
 fn print_websocket_startup_banner(addr: SocketAddr) {
-    let title = colorize("codex app-server (WebSockets)", Style::new().bold().cyan());
+    let title = colorize("qmcode app-server (WebSockets)", Style::new().bold().cyan());
     let listening_label = colorize("listening on:", Style::new().dimmed());
     let listen_url = colorize(&format!("ws://{addr}"), Style::new().green());
     let ready_label = colorize("readyz:", Style::new().dimmed());

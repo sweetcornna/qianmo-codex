@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 //! Orchestrates startup while the provisional composer owns terminal input.
 //!
 //! Lightweight validation runs before acquiring the terminal. Once the draft is visible, slow
@@ -32,7 +33,7 @@ pub(super) async fn run_main_inner(
         }
         if cli.fork_picker || cli.fork_last {
             return Err(std::io::Error::other(
-                "`codex fork --worktree` requires an explicit session ID",
+                "`qmcode fork --worktree` requires an explicit session ID",
             ));
         }
     }

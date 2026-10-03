@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
@@ -148,7 +149,7 @@ pub async fn read_connector_metadata(
     );
     anyhow::ensure!(
         auth.get_account_id().is_some(),
-        "ChatGPT account ID not available, please re-run codex login"
+        "ChatGPT account ID not available, please re-run qmcode login"
     );
 
     let store = ConnectorMetadataStore::new(

@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use codex_core::config::Config;
 use codex_http_client::HttpClient;
 use codex_http_client::HttpClientFactory;
@@ -82,7 +83,7 @@ pub(crate) async fn chatgpt_get_request_with_timeout<T: DeserializeOwned>(
     );
     anyhow::ensure!(
         auth.get_account_id().is_some(),
-        "ChatGPT account ID not available, please re-run `codex login`"
+        "ChatGPT account ID not available, please re-run `qmcode login`"
     );
     let url = format!(
         "{}/{}",
@@ -135,7 +136,7 @@ pub(crate) async fn chatgpt_post_request_with_timeout<
     );
     anyhow::ensure!(
         auth.get_account_id().is_some(),
-        "ChatGPT account ID not available, please re-run codex login"
+        "ChatGPT account ID not available, please re-run qmcode login"
     );
 
     let url = format!(

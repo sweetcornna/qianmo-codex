@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): test expectations follow the qmcode command names in user-visible messages.
 //! Exercise Cloud credential isolation through the CLI using a synthetic login.
 
 use anyhow::Result;
@@ -85,7 +86,7 @@ async fn cloud_list_only_allows_trusted_credential_destinations() -> Result<()> 
         .args(["cloud", "list", "--limit", "1", "--json"])
         .assert()
         .failure()
-        .stderr(contains("Not signed in. Please run 'codex login'"));
+        .stderr(contains("Not signed in. Please run 'qmcode login'"));
     auth_server.verify().await;
     Ok(())
 }

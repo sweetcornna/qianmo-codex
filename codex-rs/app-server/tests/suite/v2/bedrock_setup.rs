@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): test expectations follow the qmcode command names in user-visible messages.
 use anyhow::Result;
 use app_test_support::TestAppServer;
 use codex_app_server_protocol::BedrockDiscoverParams;
@@ -256,7 +257,7 @@ async fn setup_bedrock_profile_and_environment() -> Result<()> {
     .await??;
     assert_eq!(
         error.error.message,
-        "Codex-managed Bedrock credentials are already configured and take priority over AWS environment credentials. Run `codex logout` and try again."
+        "Codex-managed Bedrock credentials are already configured and take priority over AWS environment credentials. Run `qmcode logout` and try again."
     );
     assert_eq!(std::fs::read_to_string(&auth_path)?, expected_auth);
     assert_eq!(

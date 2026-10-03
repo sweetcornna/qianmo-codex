@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): test expectations follow the qmcode command names in user-visible messages.
 use super::*;
 use crate::outgoing_message::OutgoingEnvelope;
 use crate::outgoing_message::OutgoingMessage;
@@ -33,9 +34,9 @@ async fn log_write_warning_is_broadcast_once() -> anyhow::Result<()> {
             panic!("expected a broadcast notification");
         };
         let expected = if feedback_enabled {
-            "Codex couldn't save diagnostic logs to its local database. Use /feedback with logs included before closing Codex, or run `codex doctor` for diagnostics."
+            "Codex couldn't save diagnostic logs to its local database. Use /feedback with logs included before closing Codex, or run `qmcode doctor` for diagnostics."
         } else {
-            "Codex couldn't save diagnostic logs to its local database. Run `codex doctor` for diagnostics."
+            "Codex couldn't save diagnostic logs to its local database. Run `qmcode doctor` for diagnostics."
         };
         let ServerNotification::Warning(notification) = envelope.notification else {
             panic!("expected a warning");

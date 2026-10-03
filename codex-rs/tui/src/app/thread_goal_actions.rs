@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use super::App;
 use crate::app_event::AppEvent;
 use crate::app_event::ThreadGoalSetMode;
@@ -17,7 +18,7 @@ use codex_protocol::ThreadId;
 
 const EPHEMERAL_THREAD_GOAL_ERROR_MESSAGE: &str = concat!(
     "Goals need a saved session. This session is temporary.\n",
-    "Run `codex` to start a saved session, or `codex resume` / `/resume` to reopen one.",
+    "Run `qmcode` to start a saved session, or `qmcode resume` / `/resume` to reopen one.",
 );
 
 impl App {

@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -133,7 +134,7 @@ where
     if total == AUTH_HEADER_PREFIX.len() {
         buf.zeroize();
         return Err(anyhow!(
-            "API key must be provided via stdin (e.g. printenv OPENAI_API_KEY | codex responses-api-proxy)"
+            "API key must be provided via stdin (e.g. printenv OPENAI_API_KEY | qmcode responses-api-proxy)"
         ));
     }
 

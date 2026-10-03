@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 //! Command-line startup for `codex exec-server`.
 //!
 //! Transport, configuration, authentication, and shutdown are kept together.
@@ -366,7 +367,7 @@ async fn load_exec_server_remote_auth_provider(
 
     let (auth_manager, auth) = load_exec_server_remote_auth(
         config,
-        "remote exec-server registration requires ChatGPT authentication or API key authentication; run `codex login` or set CODEX_API_KEY",
+        "remote exec-server registration requires ChatGPT authentication or API key authentication; run `qmcode login` or set CODEX_API_KEY",
     )
     .await?;
 

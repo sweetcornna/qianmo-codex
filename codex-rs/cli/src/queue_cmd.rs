@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use clap::Parser;
 use clap::builder::NonEmptyStringValueParser;
 use codex_arg0::Arg0DispatchPaths;
@@ -43,7 +44,7 @@ pub(crate) async fn run_queue_command(
     let cli =
         finalize_session_archive_interactive(interactive, root_config_overrides, config_overrides);
     if !cli.images.is_empty() {
-        anyhow::bail!("`codex queue` does not support image attachments");
+        anyhow::bail!("`qmcode queue` does not support image attachments");
     }
     let explicit_remote_endpoint = resolve_remote_endpoint(
         remote.remote.or(root_remote),

@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 //! Moves a legacy daemon to its dedicated package only during an explicit update.
 //! Preparation leaves the legacy selection intact; publishing current is the cutover.
 
@@ -166,14 +167,14 @@ pub(super) async fn run(http: &impl InstallerHttp, legacy: &Daemon) -> Result<Up
     };
     let running_version = if running.is_some() {
         selected.start_managed_backend(&settings).await.context(
-            "daemon migrated but could not start; retry with `codex app-server daemon start`",
+            "daemon migrated but could not start; retry with `qmcode app-server daemon start`",
         )?;
         Some(
             selected
                 .wait_until_ready()
                 .await
                 .context(
-                    "daemon migrated but is not ready; retry with `codex app-server daemon start`",
+                    "daemon migrated but is not ready; retry with `qmcode app-server daemon start`",
                 )?
                 .app_server_version,
         )

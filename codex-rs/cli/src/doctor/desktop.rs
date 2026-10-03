@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use std::cmp::Reverse;
 use std::env;
 use std::fs;
@@ -302,7 +303,7 @@ fn stopped_desktop_check() -> DoctorCheck {
 
 fn unavailable(id: &'static str, summary: &'static str) -> DoctorCheck {
     platform::desktop_check(id, CheckStatus::Warning, summary)
-        .remediation("restore desktop diagnostic access and rerun codex doctor")
+        .remediation("restore desktop diagnostic access and rerun qmcode doctor")
 }
 
 fn redacted_path(path: &Path) -> String {

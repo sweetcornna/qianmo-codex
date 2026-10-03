@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use codex_network_proxy::ManagedNetworkSandboxContext;
 use codex_network_proxy::NetworkProxy;
 use codex_network_proxy::PROXY_URL_ENV_KEYS;
@@ -445,7 +446,7 @@ fn normalize_writable_root_for_sandbox(
             "writable root {} contains symlink component {}; symlinked writable roots are not supported.\n\
              If this writable root is at or beneath CODEX_HOME and you trust its symlink targets, \
              set `allow_symlinked_codex_home = true` at the top level of `$CODEX_HOME/config.toml` \
-             (normally `~/.codex/config.toml`) on the execution host, then restart Codex or its executor. \
+             (normally `~/.qmcode/config.toml`) on the execution host, then restart Codex or its executor. \
              This opt-out trusts targets outside CODEX_HOME and targets changed between commands. \
              It does not apply to other writable roots.",
             root.display(),

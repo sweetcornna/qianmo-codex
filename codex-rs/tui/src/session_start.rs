@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): archived-session guidance also matches `qmcode unarchive`.
 //! Interactive recovery when starting an archived session.
 //! Retries preserve the launch-resolved local presentation settings from the first attempt.
 
@@ -146,7 +147,11 @@ fn session_start_error(
 fn archived_session_guidance(err: &color_eyre::Report) -> Option<String> {
     let err = err.to_string();
     let message = &err[err.find("session ")?..];
-    if !message.contains(" is archived. Run `codex unarchive ") {
+    // Qianmo: qmcode's app server says `qmcode unarchive`; an upstream app server
+    // (remote or older daemon) still says `codex unarchive`.
+    if !message.contains(" is archived. Run `qmcode unarchive ")
+        && !message.contains(" is archived. Run `codex unarchive ")
+    {
         return None;
     }
     let message = message

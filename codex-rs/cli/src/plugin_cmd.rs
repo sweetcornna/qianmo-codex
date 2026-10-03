@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
@@ -80,7 +81,7 @@ pub enum PluginSubcommand {
 #[derive(Debug, Parser)]
 #[command(
     bin_name = "codex plugin add",
-    after_help = "Examples:\n  codex plugin add sample@debug\n  codex plugin add sample --marketplace debug"
+    after_help = "Examples:\n  qmcode plugin add sample@debug\n  qmcode plugin add sample --marketplace debug"
 )]
 pub struct AddPluginArgs {
     /// Plugin selector to install: either PLUGIN@MARKETPLACE or PLUGIN with --marketplace.
@@ -99,7 +100,7 @@ pub struct AddPluginArgs {
 #[derive(Debug, Parser)]
 #[command(
     bin_name = "codex plugin list",
-    after_help = "Examples:\n  codex plugin list\n  codex plugin list --marketplace debug\n  codex plugin list --json\n  codex plugin list --available --json"
+    after_help = "Examples:\n  qmcode plugin list\n  qmcode plugin list --marketplace debug\n  qmcode plugin list --json\n  qmcode plugin list --available --json"
 )]
 pub struct ListPluginsArgs {
     /// Only list plugins from this marketplace name.
@@ -118,7 +119,7 @@ pub struct ListPluginsArgs {
 #[derive(Debug, Parser)]
 #[command(
     bin_name = "codex plugin remove",
-    after_help = "Examples:\n  codex plugin remove sample@debug\n  codex plugin remove sample --marketplace debug"
+    after_help = "Examples:\n  qmcode plugin remove sample@debug\n  qmcode plugin remove sample --marketplace debug"
 )]
 pub struct RemovePluginArgs {
     /// Plugin selector to remove: either PLUGIN@MARKETPLACE or PLUGIN with --marketplace.

@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 // - In the default output mode, it is paramount that the only thing written to
 //   stdout is the final message (if any).
 // - In --json mode, stdout must be valid JSONL, one event per line.
@@ -303,10 +304,10 @@ pub async fn run_main(cli: Cli, arg0_paths: Arg0DispatchPaths) -> anyhow::Result
         }
         match command.as_ref() {
             Some(ExecCommand::Resume(_)) => {
-                anyhow::bail!("--worktree is not supported with `codex exec resume`");
+                anyhow::bail!("--worktree is not supported with `qmcode exec resume`");
             }
             Some(ExecCommand::Review(_)) => {
-                anyhow::bail!("--worktree is not supported with `codex exec review`");
+                anyhow::bail!("--worktree is not supported with `qmcode exec review`");
             }
             Some(ExecCommand::Fork(_)) | None => {}
         }

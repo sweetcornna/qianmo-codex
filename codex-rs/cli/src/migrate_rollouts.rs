@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
 use std::io;
 use std::io::IsTerminal;
 use std::io::Write;
@@ -335,7 +336,7 @@ fn print_human_report(
         );
     }
     if mode == RolloutMigrationMode::DryRun && counts.eligible > 0 {
-        println!("Run `codex migrate-rollouts --apply` to migrate eligible sessions.");
+        println!("Run `qmcode migrate-rollouts --apply` to migrate eligible sessions.");
     }
 
     if verbose {
