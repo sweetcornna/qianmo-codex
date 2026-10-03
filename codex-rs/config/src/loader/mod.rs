@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): Unix system config and requirements live under /etc/qmcode.
+// Modified by Qianmo AgentNest Team (2026): Unix system config and requirements live under /etc/qmcode; tests for the Qianmo entries in defaults.toml.
 mod application;
 mod layer_io;
 mod local;
@@ -12,6 +12,9 @@ mod tests;
 #[cfg(test)]
 #[path = "projectless_directory_tests.rs"]
 mod projectless_directory_tests;
+#[cfg(test)]
+#[path = "qianmo_defaults_tests.rs"]
+mod qianmo_defaults_tests;
 #[cfg(windows)]
 mod windows;
 

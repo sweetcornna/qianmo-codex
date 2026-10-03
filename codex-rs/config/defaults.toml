@@ -1,3 +1,4 @@
+# Modified by Qianmo AgentNest Team (2026): built-in qianmo handoff MCP server and notify hook; startup update check off.
 # Fixed defaults for packaged Codex clients.
 include_permissions_instructions = true
 include_apps_instructions = true
@@ -12,6 +13,18 @@ file_opener = "vscode"
 hide_agent_reasoning = false
 chatgpt_base_url = "https://chatgpt.com/backend-api/"
 project_root_markers = [".git"]
+# Qianmo: the upstream update check and prompt point to the official Codex
+# package, not to qmcode.
+check_for_update_on_startup = false
+# Qianmo handoff: sync the session to the hub after every turn. A `notify` set in
+# the user's config.toml replaces this whole array (see QIANMO.md).
+notify = ["qm", "handoff", "sync", "--hook", "qmcode"]
 
 [history]
 persistence = "save-all"
+
+# Qianmo handoff tools for the model. To turn them off, write the full table with
+# `enabled = false` in config.toml (see QIANMO.md).
+[mcp_servers.qianmo]
+command = "qm"
+args = ["handoff", "mcp"]

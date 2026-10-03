@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): the safety-retry fixture turns off the built-in qianmo MCP server and notify hook so its history snapshot does not depend on `qm` being on PATH.
 use super::*;
 use crate::app::safety_buffering::SafetyBufferedRetry;
 use crate::app::session_lifecycle::ThreadAttachPresentation;
@@ -538,6 +539,7 @@ async fn run_safety_retry(
 model = "{CURRENT_MODEL}"
 model_provider = "{MODEL_PROVIDER_ID}"
 model_catalog_json = {model_catalog_path}
+notify = []
 
 [model_providers.{MODEL_PROVIDER_ID}]
 name = "Safety retry test"
@@ -548,6 +550,11 @@ stream_max_retries = 0
 
 [features]
 goals = true
+
+[mcp_servers.qianmo]
+command = "qm"
+args = ["handoff", "mcp"]
+enabled = false
 "#,
             server.uri()
         ),

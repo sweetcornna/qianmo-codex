@@ -1,11 +1,18 @@
 ---
-source: tui/src/history_cell.rs
-assertion_line: 3310
+source: tui/src/history_cell/tests.rs
 expression: rendered
 ---
 /mcp
 
 🔌  MCP Tools
+
+  • qianmo
+    • Status: enabled
+    • Auth: Unsupported
+    • Command: qm handoff mcp
+    • Tools: (none)
+    • Resources: (none)
+    • Resource templates: (none)
 
   • some-server
     • Status: enabled

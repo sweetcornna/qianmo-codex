@@ -1,5 +1,5 @@
 ---
-source: tui/src/history_cell.rs
+source: tui/src/history_cell/tests.rs
 expression: rendered
 ---
 /mcp
@@ -22,5 +22,13 @@ expression: rendered
     • HTTP headers: Authorization=*****
     • Env HTTP headers: X-API-Key=API_KEY_ENV
     • Tools: ping
+    • Resources: (none)
+    • Resource templates: (none)
+
+  • qianmo
+    • Status: enabled
+    • Auth: Unsupported
+    • Command: qm handoff mcp
+    • Tools: (none)
     • Resources: (none)
     • Resource templates: (none)

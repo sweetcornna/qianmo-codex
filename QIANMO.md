@@ -35,7 +35,9 @@
 | `cli/src/main.rs` | clap 的 `name`、`bin_name`、`override_usage` 和 `completion` 子命令生成补全脚本时用的命令名改为 `qmcode`；`plugin marketplace` 帮助用例期望的用法行改为 `qmcode`；新增 `--version` 输出用例 | `--version` 输出 `qmcode <版本>`，能与官方 `codex-cli` 区分；帮助文本与实际命令一致；`qmcode completion` 不能生成注册到 `codex` 上的补全，否则会覆盖官方补全；clap 把父命令名传给子命令，子命令上写死的 `bin_name = "codex plugin …"` 在帮助里不生效 |
 | `cli/src/snapshots/qmcode__*.snap`（4 个）、`cli/src/doctor/snapshots/qmcode__*.snap`（7 个） | 由 `codex__*.snap` 改名；`qmcode__exec_server_args_tests__exec_server_help_documents_remote_options.snap` 里的 `Usage: codex exec-server` 改为 `Usage: qmcode exec-server` | insta 快照文件名的前缀是 crate 名，二进制改名后 crate 名随之变为 `qmcode`；用法行跟随 `bin_name` |
 | `utils/home-dir/src/lib.rs` | `find_codex_home()` 读 `QMCODE_HOME`，默认 `~/.qmcode`；错误信息同步；新增用例确认设了 `CODEX_HOME` 也不影响结果 | 状态目录隔离的唯一入口：会话、sqlite、日志、arg0 临时目录、daemon socket、`.env`、登录凭据都由它派生 |
-| `config/src/loader/mod.rs` | Unix 系统级 `config.toml`、`requirements.toml` 改到 `/etc/qmcode/` | 同机装了官方企业配置时，qmcode 不读它 |
+| `config/src/loader/mod.rs` | Unix 系统级 `config.toml`、`requirements.toml` 改到 `/etc/qmcode/`；挂上 `qianmo_defaults_tests` 用例模块 | 同机装了官方企业配置时，qmcode 不读它 |
+| `config/defaults.toml` | 加三项：`check_for_update_on_startup = false`；`notify = ["qm", "handoff", "sync", "--hook", "qmcode"]`；`[mcp_servers.qianmo]`（`command = "qm"`、`args = ["handoff", "mcp"]`） | 接力入口，见第 10 节；上游的启动升级检查与升级提示会引导用户装回官方包 |
+| `config/src/loader/qianmo_defaults_tests.rs`（新增） | 内置层含上面三项；用户层只写 `[mcp_servers.qianmo] enabled = false` 时按键合并，用户层的 `notify` 整体替换内置值 | 钉住第 10 节写的合并语义 |
 | `config/src/loader/layer_io.rs` | 旧版托管配置 `managed_config.toml` 改到 `/etc/qmcode/` | 同上 |
 | `app-server-daemon/src/settings.rs` | `auto_update_enabled` 的结构体默认值和反序列化默认值都改为 `false` | 托管 daemon 开着自动更新时会从上游地址装回官方包并切过去运行 |
 | `app-server-daemon/src/settings_tests.rs` | 遥测标签用例按默认关闭更新期望值；新增「没有设置文件时自动更新为关」用例 | 跟随默认值 |
@@ -44,6 +46,8 @@
 | `tui/src/external_editor_tests.rs` | 「默认家目录可写时退到工作区」用例把 `~/.qmcode` 设为可写（原为 `~/.codex`） | 跟随上面的回退目录；不改的话，HOME 不在 `/tmp` 下时用例失败，还会在真实 `~/.qmcode/editor` 建目录 |
 | `tui/src/app/tests.rs` | 「编辑器目录可写时拒绝」快照用例的回退目录改为 `~/.qmcode` | 同上 |
 | `tui/src/status/helpers.rs` | 状态页 AGENTS.md 摘要用例的全局路径与内联快照改为 `~/.qmcode/AGENTS.md` | 显示路径跟随状态目录 |
+| `tui/src/history_cell/snapshots/codex_tui__history_cell__tests__mcp_tools_output_{lists_tools_for_hyphenated_server_names,masks_sensitive_values}.snap` | `/mcp` 输出多出内置的 `qianmo` 一项（`Command: qm handoff mcp`） | 两条用例从带内置层的测试配置出发，内置项照常列出 |
+| `tui/src/app/tests/safety_buffering.rs` | 「安全重试」用例的测试配置关掉内置 MCP（完整表加 `enabled = false`）与 `notify`（`notify = []`） | 这条用例起内嵌 app-server 跑真实回合，会按内置配置拉起 `qm handoff mcp`；`PATH` 上没有 `qm` 时，它快照的历史里多出两条 MCP 启动失败提示，结果随环境变 |
 | `Cargo.lock` | 158 个工作区 crate 的 `version` 由 `0.0.0` 改为 `0.158.0`，其余不变 | 上游发行提交只改 `Cargo.toml` 的版本号，不提交这一步就无法 `--locked` 构建。这是 cargo 生成的文件，不加文件头：cargo 下次非 `--locked` 改写时会把注释行去掉 |
 | `../QIANMO.md`（新增） | 本文件 | 改动清单、合并步骤、构建方法 |
 | `../qianmo/build-linux.sh`（新增） | Linux 原生构建脚本：编 `qmcode` 与 `codex-code-mode-host` 两个 bin，都剥离、都出 `.debug`，放进同一个产物目录 | 见第 6、7 节 |
@@ -72,7 +76,9 @@
 - **Windows**：`%ProgramData%\OpenAI\Codex` 下的系统级配置、Windows 沙箱安装助手出错时按 `CODEX_HOME` 写日志、daemon 在 Windows 上转绝对路径的环境变量列表，都未改。M1 不出 Windows 产物。
 - **macOS 托管偏好**：MDM 域 `com.openai.codex` 未改，qmcode 仍会读管理员强制下发的官方 Codex 配置。
 - **Bazel**：`BUILD.bazel` 仍按 `codex` 命名。本 fork 只支持 cargo 构建。
-- **升级入口**：`qmcode update` 和 TUI 的升级提示仍指向官方包（npm `@openai/codex`、Homebrew、`chatgpt.com/codex/install.sh`）。P17.3 处理，见第 9 节。
+- **升级入口**：上游的升级检查查的是 `openai/codex` 的发行，给出的升级命令装的是官方包（npm `@openai/codex`、Homebrew cask `codex`、`chatgpt.com/codex/install.sh`），装上的是 `codex`，不会更新 qmcode。处理：
+  - 启动时的升级检查、升级弹窗和「Update available」提示默认关闭（`config/defaults.toml` 的 `check_for_update_on_startup = false`）。用户在 `config.toml` 里写 `check_for_update_on_startup = true` 会重新打开上游这一套，不要打开。
+  - 未改：`qmcode doctor` 的 `updates` 一行仍会请求 GitHub `openai/codex` 的最新发行号并显示安装方式（只读，不安装）；`/daemon` 菜单的「Install latest public stable」与 `qmcode app-server daemon update` 仍从 `chatgpt.com/codex/install.sh` 装官方包到 `~/.qmcode/packages/`（第 3 节，手动触发，节点不用 daemon）。
 - **上游 workflow**：fork 上 Actions 已启用，上游的 29 个 workflow 都处于启用状态。push `qianmo/*` 分支不会触发任何上游 workflow（分支过滤只有 `main` 和 `**full-ci**`，分支名不要带 `full-ci`）；但下列操作会触发：push fork 的 `main`（`blocking-ci`、`postmerge-ci`）、fork 内开任何 PR（`blocking-ci`、`v8-canary`）、推 `rust-v*.*.*` 标签（`rust-release`，跑完还会经 `workflow_run` 带起 `python-sdk-cli-release`；`rusty-v8-v*`、`codex-zsh-v*` 同理）。`cla`、`issue-*`、`close-stale-contributor-prs`、`python-sdk-release` 有 `openai/codex` 仓库判断，在 fork 上触发后跳过。runner 写成 `${{ github.event.repository.name }}-*` 的 job 在 fork 上解析为 `qianmo-codex-*` 自定义 runner，和 `macos-15-xlarge` 的 job 一样开跑即失败，不会排队（2026-09-29 push `main` 的两次运行实测如此）。**不要把上游标签推到 fork**；构建脚本也不依赖标签。是否在 fork 的 Actions 设置里停用这些 workflow，待负责人定（第 9 节）。
 - **Linux 沙箱依赖系统 `bwrap`**：产物不带 bubblewrap。qmcode 先找 `PATH` 上支持 `--perms` 的 `bwrap`，再找可执行文件旁的 `codex-resources/bwrap` 或 `bwrap`（`linux-sandbox/src/launcher.rs`）。都没有时，`read-only`、`workspace-write` 下的命令全部失败（`bubblewrap is unavailable`），`features.use_legacy_landlock` 也不能绕过（`filesystem-restricted execution requires bubblewrap`）；只有 `danger-full-access` 能跑命令。2026-10-03 在未装 bubblewrap 的 Debian 13 节点上实测如此。上游 release 另编 `--bin bwrap`（需要 `libcap-dev`）并把摘要编进二进制，本 fork 没做。
 - **用户钥匙串与插件服务**：`user-verification` 按账号区分钥匙串标签，锁文件在 `~/Library/Application Support/com.openai.codex/`。MCP OAuth 默认存钥匙串（`mcp_oauth_credentials_store = "auto"`），非 Windows 上默认走 direct 后端，条目 service 是 `Codex MCP Credentials`，account 由 MCP 服务器名和 URL 的哈希构成，不含状态目录。两边配置了同名、同 URL 的 MCP 服务器，或登录同一账号时，会读到同一条目。ChatGPT/API 登录凭据不受影响。
@@ -104,6 +110,8 @@
    cargo test -p codex-cli --bin qmcode
    cargo test -p codex-tui --lib
    ```
+   `PATH` 上不能有 `qm`（`command -v qm` 无输出）：`codex-tui` 里起内嵌 app-server 跑真实回合的用例会按内置配置（第 10 节）拉起 `qm handoff mcp`，回合结束调 `qm handoff sync`。有 `qm` 时先把它所在目录移出 `PATH` 再跑。
+
    跑完 `target/qianmo-test-home` 下应只有 `.qmcode`。在 `rust-v0.158.0` 上，`codex-tui` 有 40 条用例失败：
    - 39 条是快照差异：快照是在上游 `main`（工作区版本 `0.0.0`）上录的，发行标签把版本改成了 `0.158.0`，差异只有版本号和它引起的排版宽度；
    - 1 条是 insta 报「Insta does not allow inline snapshot assertions in loops」，落在 `tui/src/app/tests/safety_buffering.rs` 里共用 `interrupt_after_inactive_steer` 的两条用例之一，哪条失败每次不同。该文件与上游标签一致。
@@ -189,7 +197,66 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
 
 | 事项 | 归属 | 状态 |
 |---|---|---|
-| 关闭 qmcode 的启动升级检查与升级提示，避免引导用户装回官方包（`check_for_update_on_startup` 等） | P17.3（与 `config/defaults.toml` 内置项一起改） | 未做 |
+| 关闭 qmcode 的启动升级检查与升级提示，避免引导用户装回官方包（`check_for_update_on_startup` 等） | P17.3（与 `config/defaults.toml` 内置项一起改） | 启动检查已关（第 4 节「升级入口」）；`qmcode update` 未改 |
 | fork 默认分支改为 `qianmo/main`，使 `qianmo-build-linux` 也可手动触发（push `qianmo/build/**` 已可触发，非必需） | 负责人 | 待定 |
 | 是否在 fork 的 Actions 设置里停用会被自动触发的上游 workflow（第 4 节） | 负责人 | 待定 |
 | Linux 产物是否加编 `bwrap`（第 4 节「Linux 沙箱依赖系统 `bwrap`」）。节点要用 `read-only`、`workspace-write` 沙箱时需要；P17.5 节点桥按计划用 `danger-full-access`，不需要 | 负责人 | 待定 |
+
+## 10. 接力入口（P17.3）
+
+### 10.1 内置配置
+
+`config/defaults.toml` 编译进二进制，是优先级最低的配置层（`include_str!`，见 `config/src/loader/mod.rs`）；上面各层与它合并时，表按键递归合并，数组和标量整体替换。阡陌加的三项：
+
+| 键 | 值 | 作用 |
+|---|---|---|
+| `[mcp_servers.qianmo]` | `command = "qm"`、`args = ["handoff", "mcp"]` | 给模型的接力工具（`qianmo_*`），由阡陌侧 `qm handoff mcp` 提供 |
+| `notify` | `["qm", "handoff", "sync", "--hook", "qmcode"]` | 每个回合结束后同步会话 |
+| `check_for_update_on_startup` | `false` | 见第 4 节「升级入口」 |
+
+- **关掉内置 MCP**：在 `~/.qmcode/config.toml` 写完整表：
+
+  ```toml
+  [mcp_servers.qianmo]
+  command = "qm"
+  args = ["handoff", "mcp"]
+  enabled = false
+  ```
+
+  只写 `enabled = false` 时有效配置也会关掉它（按键合并），但 `qmcode mcp add`、`qmcode mcp remove` 单独解析用户文件，半张表在那里不合法，两个命令都会报 `invalid transport in 'qianmo'`（P17.2 第 6 项 T4）。`qmcode mcp remove qianmo` 删不掉内置项（读代码，未实跑）。也可以按次关：`-c mcp_servers.qianmo.enabled=false`。
+- **用户自设 `notify` 会整个顶掉内置值**，接力同步随之停止。两者都要时，用户自己写一个包装脚本当 `notify`，在里面先调自己的程序，再调 `qm handoff sync --hook qmcode "<最后一个参数>"`。`notify = []` 等于关闭。项目级 `.codex/config.toml` 不能设 `notify`（上游的项目层禁止项），不影响内置层。
+- `qm` 按 qmcode 进程的 `PATH` 查找。找不到时 MCP 报启动失败、线程照常（P17.2 第 6 项 T6），界面在每个新线程开头显示两条提示：``MCP client for `qianmo` failed to start: MCP startup failed: No such file or directory (os error 2)`` 和 `MCP startup incomplete (failed: qianmo)`；notify 的进程起不来，只记日志。没装 `qm` 又不想看到提示时，按上面的写法关掉。
+- **节点上不要带这两项**：节点上有 `qm`（节点桥 `qm handoff node`），不关的话节点线程会拉起 `qm handoff mcp`，每个回合结束还会调 `qm handoff sync`。P17.5 起节点 app-server 时加 `-c mcp_servers.qianmo.enabled=false -c 'notify=[]'`，或写进节点 `QMCODE_HOME` 下的 `config.toml`。
+
+### 10.2 给阡陌侧的接口约定
+
+**`qm handoff mcp`**（P17.3 阡陌侧）
+
+- stdio MCP。qmcode 每个线程启动时各拉起一份；`/mcp`、app-server 的 `mcpServerStatus/list` 会再起一份（P17.2 第 6 项 T2）。必须无状态、可多实例并发。
+- 进程的工作目录是线程的 `cwd`（读代码：`core/src/session/mcp.rs` 的 `local_process_cwd`；未实测）。
+- 继承 qmcode 进程的环境，其中可能有模型 key 所在的环境变量；不得把环境变量写进日志。
+
+**`qm handoff sync --hook qmcode`**（P17.4）
+
+- 完整 argv：`qm handoff sync --hook qmcode <JSON>`，JSON 总是最后一个参数（第 6 个，下标 5）。
+- JSON 形状（`hooks/src/legacy_notify.rs` 的 `UserNotification`，字段名 kebab-case；上游用例 `legacy_notify_json_matches_historical_wire_shape` 钉住了它）：
+
+  ```json
+  {
+    "type": "agent-turn-complete",
+    "thread-id": "b5f6c1c2-1111-2222-3333-444455556666",
+    "turn-id": "12345",
+    "cwd": "/Users/example/project",
+    "client": "codex-tui",
+    "input-messages": ["Rename `foo` to `bar` and update the callsites."],
+    "last-assistant-message": "Rename complete and verified `cargo build` succeeds."
+  }
+  ```
+
+  - `type` 目前只有 `agent-turn-complete`。
+  - `thread-id` 即会话 id，会话文件是 `$QMCODE_HOME/sessions/YYYY/MM/DD/rollout-*-<thread-id>.jsonl`；`turn-id` 与 rollout 里 `task_complete` 行的 `turn_id` 相同（P17.2 第 7 项）。
+  - `client` 是接入 app-server 的客户端名，没有时整个键不出现；`last-assistant-message` 可能是 `null`。
+  - `input-messages`、`last-assistant-message` 是对话原文，不要写日志。
+- qmcode 即发即忘：标准输入接 `/dev/null`，标准输出与标准错误丢弃，不等进程退出，不看退出码。
+- 环境是 qmcode 进程的完整环境（去掉 5 个启动上下文变量，P17.2 第 6 项），含 `PATH`、`SSH_AUTH_SOCK`，也含模型 key 所在的变量；不得记录环境变量。
+- 回合紧挨着时会连续触发；也会为没有 rollout 文件的临时线程触发（P17.2 第 5、7 项），找不到会话文件就跳过。
