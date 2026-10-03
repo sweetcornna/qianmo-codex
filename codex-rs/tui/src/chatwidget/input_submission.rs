@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): shell-command submission is reachable from slash dispatch (/handoff, /pull).
 //! User-message and shell-prompt submission behavior for `ChatWidget`.
 
 use super::*;
@@ -50,7 +51,7 @@ impl ChatWidget {
         }
     }
 
-    fn submit_shell_command_with_history(
+    pub(super) fn submit_shell_command_with_history(
         &mut self,
         command: &str,
         history_text: &str,

@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): /handoff and /pull run `qm handoff now|pull` through the `!` shell-command path.
 //! Slash-command dispatch and local-recall handoff for `ChatWidget`.
 //!
 //! `ChatComposer` parses slash input and stages recognized command text for local
@@ -39,6 +40,8 @@ const SIDE_SLASH_COMMAND_UNAVAILABLE_HINT: &str =
 const GOAL_USAGE_HINT: &str = "Example: /goal improve benchmark coverage";
 const RAW_USAGE: &str = "Usage: /raw [on|off]";
 const USAGE_CHATGPT_LOGIN_REQUIRED: &str = "Sign in with ChatGPT to use /usage.";
+const QIANMO_HANDOFF_SHELL_COMMAND: &str = "qm handoff now";
+const QIANMO_PULL_SHELL_COMMAND: &str = "qm handoff pull";
 
 impl ChatWidget {
     /// Dispatch a bare slash command and record its staged local-history entry.
@@ -286,6 +289,9 @@ impl ChatWidget {
                 };
                 self.app_event_tx
                     .send(AppEvent::OpenDesktopThread { thread_id });
+            }
+            SlashCommand::Handoff | SlashCommand::Pull => {
+                self.run_qianmo_handoff_command(cmd);
             }
             SlashCommand::Init => {
                 const INIT_PROMPT: &str = include_str!("../../assets/prompt_for_init_command.md");
@@ -1195,6 +1201,29 @@ impl ChatWidget {
         }
     }
 
+    /// Runs `qm handoff now|pull` through the `!` shell-command path: the command runs in the
+    /// thread's cwd with `CODEX_THREAD_ID` set, and its output is rendered in the transcript.
+    fn run_qianmo_handoff_command(&mut self, cmd: SlashCommand) {
+        let shell_command = if cmd == SlashCommand::Handoff {
+            QIANMO_HANDOFF_SHELL_COMMAND
+        } else {
+            QIANMO_PULL_SHELL_COMMAND
+        };
+        // `!` commands run on the app-server host; for a remote session that is not this machine.
+        if self
+            .remote_connection
+            .as_ref()
+            .is_some_and(|connection| !connection.is_local_daemon)
+        {
+            self.add_error_message(format!(
+                "'/{}' is unavailable in remote sessions: it would run `{shell_command}` on the remote host.",
+                cmd.command()
+            ));
+            return;
+        }
+        self.submit_shell_command_with_history(shell_command, &format!("/{}", cmd.command()));
+    }
+
     fn ensure_usage_command_available(&mut self) -> bool {
         if self.has_codex_backend_auth {
             return true;
@@ -1278,7 +1307,9 @@ impl ChatWidget {
             | SlashCommand::Statusline
             | SlashCommand::Theme
             | SlashCommand::Tui
-            | SlashCommand::Pets => QueueDrain::Stop,
+            | SlashCommand::Pets
+            | SlashCommand::Handoff
+            | SlashCommand::Pull => QueueDrain::Stop,
         }
     }
 

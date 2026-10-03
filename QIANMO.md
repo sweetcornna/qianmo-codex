@@ -48,6 +48,11 @@
 | `tui/src/status/helpers.rs` | 状态页 AGENTS.md 摘要用例的全局路径与内联快照改为 `~/.qmcode/AGENTS.md` | 显示路径跟随状态目录 |
 | `tui/src/history_cell/snapshots/codex_tui__history_cell__tests__mcp_tools_output_{lists_tools_for_hyphenated_server_names,masks_sensitive_values}.snap` | `/mcp` 输出多出内置的 `qianmo` 一项（`Command: qm handoff mcp`） | 两条用例从带内置层的测试配置出发，内置项照常列出 |
 | `tui/src/app/tests/safety_buffering.rs` | 「安全重试」用例的测试配置关掉内置 MCP（完整表加 `enabled = false`）与 `notify`（`notify = []`） | 这条用例起内嵌 app-server 跑真实回合，会按内置配置拉起 `qm handoff mcp`；`PATH` 上没有 `qm` 时，它快照的历史里多出两条 MCP 启动失败提示，结果随环境变 |
+| `tui/src/slash_command.rs` | 加 `Handoff`、`Pull` 两个变体（弹窗里排在 `/app` 之后）与说明；回合进行中不可用 | 接力入口，见第 10.3 节 |
+| `tui/src/chatwidget/slash_dispatch.rs` | `/handoff`、`/pull` 经 `submit_shell_command_with_history` 分别执行 `qm handoff now`、`qm handoff pull`；远程会话（`--remote` 接的不是本机 daemon）拒绝执行；排队分发后等命令结束再放行下一条输入 | 复用界面现成的 `!` 执行路径，不另起进程 |
+| `tui/src/chatwidget/input_submission.rs` | `submit_shell_command_with_history` 改为 `pub(super)` | 供上一行调用 |
+| `tui/src/chatwidget/tests.rs`、`tui/src/chatwidget/tests/qianmo_handoff_tests.rs`（新增） | 命令表含两项；分发到 `qm handoff now` / `qm handoff pull`；输入框敲 `/handoff` 后命令输出显示在会话里；回合进行中拒绝；远程会话拒绝、本机 daemon 照常 | 见第 10.3 节 |
+| `tui/src/bottom_pane/snapshots/codex_tui__bottom_pane__command_popup__tests__command_popup_default_items.snap` | 命令列表多出 `/handoff`、`/pull` 两行 | 跟随枚举 |
 | `Cargo.lock` | 158 个工作区 crate 的 `version` 由 `0.0.0` 改为 `0.158.0`，其余不变 | 上游发行提交只改 `Cargo.toml` 的版本号，不提交这一步就无法 `--locked` 构建。这是 cargo 生成的文件，不加文件头：cargo 下次非 `--locked` 改写时会把注释行去掉 |
 | `../QIANMO.md`（新增） | 本文件 | 改动清单、合并步骤、构建方法 |
 | `../qianmo/build-linux.sh`（新增） | Linux 原生构建脚本：编 `qmcode` 与 `codex-code-mode-host` 两个 bin，都剥离、都出 `.debug`，放进同一个产物目录 | 见第 6、7 节 |
@@ -261,3 +266,24 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
 - qmcode 即发即忘：标准输入接 `/dev/null`，标准输出与标准错误丢弃，不等进程退出，不看退出码。
 - 环境是 qmcode 进程的完整环境（去掉 5 个启动上下文变量，P17.2 第 6 项），含 `PATH`、`SSH_AUTH_SOCK`，也含模型 key 所在的变量；不得记录环境变量。
 - 回合紧挨着时会连续触发；也会为没有 rollout 文件的临时线程触发（P17.2 第 5、7 项），找不到会话文件就跳过。
+
+### 10.3 界面里的 `/handoff`、`/pull`
+
+| 输入 | 执行 |
+|---|---|
+| `/handoff` | `qm handoff now` |
+| `/pull` | `qm handoff pull` |
+
+- 走界面现成的 `!` 执行路径（`ChatWidget::submit_shell_command_with_history`），经 app-server 的 `thread/shellCommand` 在 app-server 所在机器上执行，和输入 `!qm handoff now` 效果相同。命令输出（标准输出与标准错误合并）和退出码显示在会话里；它也会作为「用户 shell 命令」记录写进会话，下一回合发给模型（读代码：`core/src/tasks/user_shell.rs` 的 `persist_user_shell_output`）。
+- 执行环境（2026-10-03 用 debug 构建的 `qmcode app-server` 加替身 `qm` 实测，见下）：`<用户登录 shell> -lc 'qm handoff now'`（本机是 `/bin/zsh -lc`）；工作目录是线程的 `cwd`；环境里有 `CODEX_THREAD_ID`（当前线程 id）、`CODEX_SESSION_ID`、`CODEX_VERSION`，以及 qmcode 进程的 `QMCODE_HOME`；标准输入不是终端；不进沙箱、不走审批（`thread/shellCommand` 的约定），默认超时 1 小时。
+- 回合进行中不可用，界面提示 `'/handoff' is disabled while a task is in progress.`；排在队列里的 `/handoff` 在回合结束后执行，执行完再放行后面的输入。
+- `--remote` 接到别的机器时（不是本机 daemon）拒绝执行，提示 ``'/handoff' is unavailable in remote sessions: it would run `qm handoff now` on the remote host.``：`!` 命令在 app-server 那台机器上跑，接到云端节点时会在节点上执行。本机 daemon 照常执行。
+- 不带参数。读代码（`bottom_pane/chat_composer/slash_input.rs`）：`/handoff 目标…` 这类写法不会被识别成命令，会当作普通消息发给模型；未实测。
+
+**给 `qm handoff now` 的约定（P17.3、P17.4）**
+
+- 会话 id 取 `CODEX_THREAD_ID`；会话文件在 `$QMCODE_HOME/sessions/YYYY/MM/DD/rollout-*-<id>.jsonl`（`QMCODE_HOME` 没设时是 `~/.qmcode`）。
+- **由 `/handoff` 调起时，`/handoff` 自己就是一个进行中的回合**：`thread/shellCommand` 先开一个独立回合再执行命令。实测 `qm handoff now` 运行时，会话文件末行是这个回合的 `{"type":"event_msg","payload":{"type":"task_started","turn_id":"<shell 回合 id>",…}}`，其后没有任何行、也没有对应的 `task_complete`；命令结束后才追加用户 shell 记录和 `task_complete`。P17.2 第 7 项第 5 条「最近一个 `task_started` 必须已有 `task_complete` 或 `turn_aborted`」的判据要排除这一行，否则从 `/handoff` 发起的转交永远判为「回合进行中」。可用的区分：环境里有 `CODEX_THREAD_ID`，且末尾这个 `task_started` 之后没有任何行；判完整时看它前面那个回合。
+- 输出是给人看的文本，原样显示；失败时退出码非 0，界面把这条命令标成失败。
+
+**实测记录**（2026-10-03，debug 构建，本机 macOS）：`qmcode app-server` 走 stdio，配置指向本机 127.0.0.1 上的假 Responses 服务（不调真实模型、不带 key），`PATH` 上放一个只记录调用的替身 `qm`。一个模型回合加一次 `thread/shellCommand "qm handoff now"`，替身记到 3 次调用：线程启动时 `qm handoff mcp`（工作目录是线程 cwd）；模型回合结束后 `qm handoff sync --hook qmcode <JSON>`；`qm handoff now`（工作目录是线程 cwd，`CODEX_THREAD_ID` 等于线程 id，输出显示在 `commandExecution` 条目的 `aggregatedOutput` 里，`source` 为 `userShell`）。shell 回合结束后没有触发 notify。另跑一次带 `-c 'notify=[]' -c mcp_servers.qianmo.enabled=false`：没有 MCP 启动、没有 notify，只剩 `qm handoff now`。

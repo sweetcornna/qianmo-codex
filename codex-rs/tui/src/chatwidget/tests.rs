@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): registers the /handoff and /pull tests.
 //! Exercises `ChatWidget` event handling and rendering invariants.
 //!
 //! These tests cover both app-server-native inputs and focused widget helpers. Many assertions are
@@ -276,6 +277,8 @@ mod plan_mode;
 #[path = "tests/plugin_catalog_tests.rs"]
 mod plugin_catalog;
 mod popups_and_settings;
+#[path = "tests/qianmo_handoff_tests.rs"]
+mod qianmo_handoff_tests;
 #[path = "tests/rate_limit_recovery_tests.rs"]
 mod rate_limit_recovery_tests;
 #[path = "tests/reasoning_status_tests.rs"]

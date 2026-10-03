@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): /handoff and /pull commands for the Qianmo handoff.
 use strum::IntoEnumIterator;
 use strum_macros::AsRefStr;
 use strum_macros::EnumIter;
@@ -35,6 +36,9 @@ pub enum SlashCommand {
     Fork,
     Worktree,
     App,
+    // Qianmo handoff entry points, run through the `!` shell-command path.
+    Handoff,
+    Pull,
     Init,
     Compact,
     Recap,
@@ -103,6 +107,8 @@ impl SlashCommand {
             SlashCommand::Fork => "fork the current chat",
             SlashCommand::Worktree => "start or continue a conversation in a new worktree",
             SlashCommand::App => "continue this session in the Desktop app",
+            SlashCommand::Handoff => "hand off this session to the cloud (qm handoff now)",
+            SlashCommand::Pull => "pull the cloud result back to this machine (qm handoff pull)",
             SlashCommand::Quit | SlashCommand::Exit => "exit Codex",
             SlashCommand::Copy => "copy the last response or part of it",
             SlashCommand::Export => "export the conversation as markdown",
@@ -259,6 +265,8 @@ impl SlashCommand {
             | SlashCommand::Cd
             | SlashCommand::Clear
             | SlashCommand::Logout
+            | SlashCommand::Handoff
+            | SlashCommand::Pull
             | SlashCommand::MemoryDrop
             | SlashCommand::MemoryUpdate => false,
             SlashCommand::Diff

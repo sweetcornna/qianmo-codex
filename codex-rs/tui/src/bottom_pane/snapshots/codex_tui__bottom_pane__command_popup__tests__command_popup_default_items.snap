@@ -21,6 +21,8 @@ expression: commands
 /resume - resume a saved chat
 /fork - fork the current chat
 /app - continue this session in the Desktop app
+/handoff - hand off this session to the cloud (qm handoff now)
+/pull - pull the cloud result back to this machine (qm handoff pull)
 /init - create an AGENTS.md file with instructions for Codex
 /compact - summarize conversation to prevent hitting the context limit
 /recap - summarize the current conversation now
