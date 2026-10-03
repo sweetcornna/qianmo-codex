@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): the updates row is fixed text (Qianmo releases) and never probes upstream release channels.
 //! Diagnoses whether Codex update paths target the running installation.
 //!
 //! Update diagnostics combine cached version metadata, install-channel hints,
@@ -45,12 +46,39 @@ const BACKEND_DESKTOP_UPDATE_URL: &str = "https://chatgpt.com/backend-api/wham/a
 const DESKTOP_UPDATE_URL: &str =
     "https://persistent.oaistatic.com/codex-app-prod/windows-store-update.json";
 
+/// Qianmo: summary of the fixed `updates` row. qmcode does not update itself; the
+/// upstream probes below look up the official Codex package (GitHub `openai/codex`,
+/// the Homebrew `codex` cask), so the row reports this instead and never goes online.
+pub(super) const QMCODE_UPDATES_SUMMARY: &str =
+    "updates are managed by Qianmo releases; qmcode does not check for updates";
+
+/// Builds the fixed update row for qmcode without network access.
+pub(super) async fn updates_check(config: &Config) -> DoctorCheck {
+    qmcode_updates_check(config.check_for_update_on_startup)
+}
+
+pub(super) fn qmcode_updates_check(check_for_update_on_startup: bool) -> DoctorCheck {
+    DoctorCheck::new(
+        "updates.status",
+        "updates",
+        CheckStatus::Ok,
+        QMCODE_UPDATES_SUMMARY.to_string(),
+    )
+    .details(vec![
+        "update source: Qianmo releases (install a newer qmcode build to update)".to_string(),
+        format!("check for update on startup: {check_for_update_on_startup}"),
+    ])
+}
+
 /// Builds the update-health row for the current installation.
 ///
 /// Network failures while fetching latest-version metadata degrade the row to a
 /// warning instead of failing doctor outright; update freshness is useful
 /// support context but should not mask more direct install/config failures.
-pub(super) async fn updates_check(config: &Config) -> DoctorCheck {
+///
+/// Qianmo: unused; kept unchanged so upstream merges apply cleanly.
+#[allow(dead_code)]
+async fn upstream_updates_check(config: &Config) -> DoctorCheck {
     let current_exe = std::env::current_exe().ok();
     let install_context = doctor_install_context(current_exe.as_deref());
     let mut details = vec![
@@ -498,6 +526,29 @@ struct VersionInfo {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn qmcode_updates_row_is_fixed_and_offline() {
+        let check = qmcode_updates_check(/*check_for_update_on_startup*/ false);
+
+        assert_eq!(check.id, "updates.status");
+        assert_eq!(check.status, CheckStatus::Ok);
+        assert_eq!(check.summary, QMCODE_UPDATES_SUMMARY);
+        assert_eq!(
+            check.details,
+            vec![
+                "update source: Qianmo releases (install a newer qmcode build to update)"
+                    .to_string(),
+                "check for update on startup: false".to_string(),
+            ]
+        );
+        // No upstream release, cask or install-channel information leaks into the row.
+        for detail in &check.details {
+            for upstream in ["latest version", "openai/codex", "@openai/codex", "brew"] {
+                assert!(!detail.contains(upstream), "{detail}");
+            }
+        }
+    }
 
     #[tokio::test]
     async fn version_http_probe_decodes_json_and_rejects_invalid_responses() {
