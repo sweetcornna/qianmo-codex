@@ -121,7 +121,7 @@ cargo build --release --bin qmcode
 # 产物：codex-rs/target/release/qmcode
 ```
 
-Linux 发布产物**以 GitHub Actions 为主**：workflow `.github/workflows/qianmo-build-linux.yml` 只能手动触发（`workflow_dispatch`，可选输入 `ref`），在 `ubuntu-24.04`（x86_64）上执行：
+Linux 发布产物**以 GitHub Actions 为主**：workflow `.github/workflows/qianmo-build-linux.yml` 有两种触发：push 任何 `qianmo/build/**` 分支（不需要改默认分支，日常用这个），或手动 `workflow_dispatch`（可选输入 `ref`，要求文件在默认分支上）。它在 `ubuntu-24.04`（x86_64）上执行：
 
 1. checkout（不保留凭据）；
 2. 用 apt 装 `build-essential pkg-config libssl-dev`；
@@ -134,6 +134,8 @@ Linux 发布产物**以 GitHub Actions 为主**：workflow `.github/workflows/qi
 ```sh
 gh workflow run qianmo-build-linux.yml --repo sweetcornna/qianmo-codex --ref <分支> [-f ref=<分支/标签/提交>]
 ```
+
+日常触发：`git push origin <要构建的提交>:refs/heads/qianmo/build/<名字>`，构建的就是这个分支的头提交。
 
 注意：GitHub 文档写明 `workflow_dispatch`「只在 workflow 文件位于默认分支时接收事件」。fork 的默认分支目前是 `main`（纯镜像，没有这个文件），所以要先把默认分支设为 `qianmo/main` 才能触发（待负责人定，见第 9 节）。`--ref` 决定用哪个分支上的 workflow 文件和源码；要构建别的分支、标签或提交，加 `-f ref=…`。artifact 下载后是 zip，解压出的二进制没有执行位，先用 `sha256sum -c <名字>.sha256` 核对，再 `chmod +x`。
 
@@ -166,5 +168,5 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
 | 事项 | 归属 | 状态 |
 |---|---|---|
 | 关闭 qmcode 的启动升级检查与升级提示，避免引导用户装回官方包（`check_for_update_on_startup` 等） | P17.3（与 `config/defaults.toml` 内置项一起改） | 未做 |
-| fork 默认分支改为 `qianmo/main`，使 `qianmo-build-linux` 可手动触发 | 负责人 | 待定 |
+| fork 默认分支改为 `qianmo/main`，使 `qianmo-build-linux` 也可手动触发（push `qianmo/build/**` 已可触发，非必需） | 负责人 | 待定 |
 | 是否在 fork 的 Actions 设置里停用会被自动触发的上游 workflow（第 4 节） | 负责人 | 待定 |

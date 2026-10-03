@@ -3,10 +3,15 @@
 #
 # Build the qmcode release binary for Linux x86_64 with qianmo/build-linux.sh
 # and upload it with its sha256, build info (including build seconds), and log.
-# Manual trigger only; see QIANMO.md section 6.
+# Triggered by pushing a branch under qianmo/build/ (works without changing the
+# fork's default branch), or manually once this file is on the default branch.
+# See QIANMO.md section 6.
 name: qianmo-build-linux
 
 on:
+  push:
+    branches:
+      - 'qianmo/build/**'
   workflow_dispatch:
     inputs:
       ref:
