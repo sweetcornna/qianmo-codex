@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): help usage, --version, and shell completions use the qmcode name; `qmcode update` refuses to run the upstream updater; user-visible command names and paths use qmcode and ~/.qmcode; help text names $QMCODE_HOME instead of $CODEX_HOME.
+// Modified by Qianmo AgentNest Team (2026): help usage, --version, and shell completions use the qmcode name; `qmcode update` refuses to run the upstream updater; user-visible command names and paths use qmcode and ~/.qmcode; help text names $QMCODE_HOME instead of $CODEX_HOME; `app-server daemon update` without --from-cli refuses to install the official package.
 use clap::Args;
 use clap::CommandFactory;
 use clap::Parser;
@@ -649,6 +649,8 @@ enum AppServerDaemonSubcommand {
     Restart,
 
     /// Update the daemon package (may interrupt running work).
+    // Qianmo: hidden; without --from-cli it would install the official Codex package.
+    #[clap(hide = true)]
     Update {
         /// Copy and pin this CLI package.
         #[arg(long)]
@@ -865,6 +867,15 @@ const QMCODE_UPDATE_UNAVAILABLE: &str = "`qmcode update` is not available: qmcod
 
 fn run_update_command() -> anyhow::Result<()> {
     anyhow::bail!(QMCODE_UPDATE_UNAVAILABLE)
+}
+
+/// Qianmo: `app-server daemon update` without `--from-cli` downloads the official
+/// installer (chatgpt.com/codex/install.sh) and puts the official Codex package in the
+/// daemon slot. Only `--from-cli`, which copies this qmcode build, stays available.
+const QMCODE_DAEMON_UPDATE_UNAVAILABLE: &str = "`qmcode app-server daemon update` is not available: it would install the official Codex package instead of qmcode. Run `qmcode app-server daemon update --from-cli` to install this qmcode build for the daemon.";
+
+fn run_upstream_daemon_update_command() -> anyhow::Result<()> {
+    anyhow::bail!(QMCODE_DAEMON_UPDATE_UNAVAILABLE)
 }
 
 fn run_execpolicycheck(cmd: ExecPolicyCheckCommand) -> anyhow::Result<()> {
@@ -1272,6 +1283,12 @@ async fn cli_main(
                         std::process::exit(0);
                     }
                 }
+                Some(AppServerSubcommand::Daemon(AppServerDaemonCommand {
+                    subcommand:
+                        AppServerDaemonSubcommand::Update {
+                            from_cli: false, ..
+                        },
+                })) => run_upstream_daemon_update_command()?,
                 Some(AppServerSubcommand::Daemon(daemon_cli)) => match daemon_cli.subcommand {
                     AppServerDaemonSubcommand::Start => {
                         print_app_server_daemon_output(AppServerLifecycleCommand::Start).await?;
@@ -3498,6 +3515,62 @@ mod tests {
             }
         }
         assert_eq!(offending, Vec::<String>::new());
+    }
+
+    #[test]
+    fn daemon_update_is_hidden_and_refuses_the_upstream_package() {
+        let cli = MultitoolCli::try_parse_from(["qmcode", "app-server", "daemon", "update"])
+            .expect("daemon update should parse");
+        let Some(Subcommand::AppServer(AppServerCommand {
+            subcommand: Some(AppServerSubcommand::Daemon(daemon)),
+            ..
+        })) = cli.subcommand
+        else {
+            panic!("expected app-server daemon subcommand");
+        };
+        assert!(matches!(
+            daemon.subcommand,
+            AppServerDaemonSubcommand::Update {
+                from_cli: false,
+                ..
+            }
+        ));
+        let err = run_upstream_daemon_update_command()
+            .expect_err("daemon update must not install the official package");
+        assert_eq!(err.to_string(), QMCODE_DAEMON_UPDATE_UNAVAILABLE);
+
+        // Copying this qmcode build into the daemon slot stays available.
+        let cli = MultitoolCli::try_parse_from([
+            "qmcode",
+            "app-server",
+            "daemon",
+            "update",
+            "--from-cli",
+            "--yes",
+        ])
+        .expect("daemon update --from-cli should parse");
+        let Some(Subcommand::AppServer(AppServerCommand {
+            subcommand: Some(AppServerSubcommand::Daemon(daemon)),
+            ..
+        })) = cli.subcommand
+        else {
+            panic!("expected app-server daemon subcommand");
+        };
+        assert!(matches!(
+            daemon.subcommand,
+            AppServerDaemonSubcommand::Update {
+                from_cli: true,
+                yes: true
+            }
+        ));
+
+        let help = help_from_args(&["qmcode", "app-server", "daemon", "--help"]);
+        assert!(
+            !help
+                .lines()
+                .any(|line| line.trim_start().starts_with("update ")),
+            "{help}"
+        );
     }
 
     #[test]

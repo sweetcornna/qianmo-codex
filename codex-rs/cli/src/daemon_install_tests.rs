@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): test expectations follow the qmcode command names in user-visible messages.
+// Modified by Qianmo AgentNest Team (2026): test expectations follow the qmcode command names in user-visible messages; no guidance toward the refused upstream `app-server daemon update`.
 use super::*;
 
 #[test]
@@ -13,7 +13,7 @@ fn running_daemon_replacement_prompt() {
     insta::assert_snapshot!(describe_install(&request), @r"
     Replace installed daemon version 0.152.0 with CLI version 0.0.0 from /cli/package.
     The daemon package will be installed in /home/packages/app-server-daemon.
-    The selected package will be pinned. Run `qmcode app-server daemon update` to return to production updates.
+    The selected package will be pinned.
     The running daemon will restart; active or queued work may be interrupted.
     ");
 }

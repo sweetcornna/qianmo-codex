@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode; no guidance toward the refused upstream `app-server daemon update`.
 //! Confirmation for copying the invoking CLI package into a daemon installation.
 
 use std::io::IsTerminal;
@@ -24,7 +24,7 @@ pub(crate) fn confirm_install(request: &InstallRequest, yes: bool) -> Result<boo
 
 fn describe_install(request: &InstallRequest) -> String {
     let mut message = format!(
-        "Replace installed daemon version {} with CLI version {} from {}.\nThe daemon package will be installed in {}.\nThe selected package will be pinned. Run `qmcode app-server daemon update` to return to production updates.",
+        "Replace installed daemon version {} with CLI version {} from {}.\nThe daemon package will be installed in {}.\nThe selected package will be pinned.",
         request.installed_version.as_deref().unwrap_or("unknown"),
         request.version,
         request.source.display(),

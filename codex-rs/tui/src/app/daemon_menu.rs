@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): the daemon menu does not offer or confirm the public stable (official package) install.
 //! Local daemon maintenance only records an update action after explicit confirmation.
 //! The CLI executes it in the foreground after the TUI restores the terminal.
 
@@ -8,6 +9,10 @@ use crate::update_action::DaemonUpdateSource;
 use crate::wrapping::word_wrap_lines;
 use ratatui::buffer::Buffer;
 use ratatui::widgets::Paragraph;
+
+/// Qianmo: the public stable source runs `app-server daemon update`, which installs the
+/// official Codex package; qmcode refuses it and only copies its own build.
+pub(super) const QMCODE_PUBLIC_STABLE_DAEMON_UNAVAILABLE: &str = "Installing the latest public stable daemon is not available in qmcode: it would install the official Codex package. Use \"Use this CLI build\" to run this qmcode build in the daemon.";
 
 struct DaemonMenuHeader(Vec<Line<'static>>);
 
@@ -57,10 +62,8 @@ impl App {
             .is_some()
         });
         let items = [
-            (
-                DaemonUpdateSource::PublicStable,
-                "Install latest public stable",
-            ),
+            // Qianmo: "Install latest public stable" is not offered; it installs the
+            // official Codex package in the daemon slot (see `confirm_daemon_update`).
             (DaemonUpdateSource::ThisCli, "Use this CLI build"),
         ]
         .into_iter()
@@ -86,6 +89,11 @@ impl App {
     }
 
     pub(super) fn confirm_daemon_update(&mut self, source: DaemonUpdateSource) {
+        if source == DaemonUpdateSource::PublicStable {
+            self.chat_widget
+                .add_error_message(QMCODE_PUBLIC_STABLE_DAEMON_UNAVAILABLE.to_string());
+            return;
+        }
         let Some(executable) = &self.daemon_cli_executable else {
             return;
         };

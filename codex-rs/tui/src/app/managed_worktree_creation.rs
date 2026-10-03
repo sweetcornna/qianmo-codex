@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode; no guidance toward the refused upstream `app-server daemon update`.
 //! Managed checkout creation and handoff from blocking Git work to the TUI event loop.
 //!
 //! Source-only blockers are checked before allocation. The completion event rechecks the
@@ -26,7 +26,7 @@ pub(super) fn background_terminals_blocker(
                             || source.message.contains("unknown method"))) =>
         {
             Some(
-                "The local Codex service cannot check background terminals. Run `qmcode app-server daemon update`, then restart Codex.",
+                "The local Codex service cannot check background terminals. Run `qmcode app-server daemon update --from-cli`, then restart Codex.",
             )
         }
         _ => Some("Active background terminals block /cd."),

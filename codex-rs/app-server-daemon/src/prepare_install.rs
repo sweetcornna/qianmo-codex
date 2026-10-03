@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode.
+// Modified by Qianmo AgentNest Team (2026): user-visible command names and paths use qmcode and ~/.qmcode; no guidance toward the refused upstream `app-server daemon update`.
 //! Installs complete CLI packages after confirmation. Initial starts preserve
 //! existing selections; explicit replacements migrate to dedicated packages and stay pinned.
 
@@ -73,7 +73,7 @@ pub async fn update_from_cli(
             .ok()
             .map(|info| info.app_server_version),
         managed_codex_path,
-        message: "The CLI package is selected and pinned. Run `qmcode app-server daemon update` to return to production updates.".to_string(),
+        message: "The CLI package is selected and pinned.".to_string(),
     }))
 }
 
