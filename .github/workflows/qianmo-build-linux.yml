@@ -1,0 +1,115 @@
+# Copyright 2026 Qianmo AgentNest Team
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build the qmcode release binary for Linux x86_64 with qianmo/build-linux.sh
+# and upload it with its sha256, build info (including build seconds), and log.
+# Manual trigger only; see QIANMO.md section 6.
+name: qianmo-build-linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit to build. Empty builds the ref the run was dispatched on.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qianmo-build-linux-${{ inputs.ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build qmcode for x86_64 Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      QIANMO_DIST: ${{ github.workspace }}/codex-rs/target/qianmo-dist
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Install Linux build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          # qmcode links the system OpenSSL through native-tls (pkg-config +
+          # libssl-dev); bundled C dependencies (sqlite, zstd, aws-lc) need a C
+          # toolchain. libcap-dev and libasound2-dev from the upstream jobs are
+          # only needed for codex-bwrap and voice crates, which qmcode does not
+          # build.
+          sudo apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev
+
+      - name: Install the pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          toolchain="$(sed -n 's/^channel *= *"\(.*\)"$/\1/p' codex-rs/rust-toolchain.toml)"
+          test -n "${toolchain}"
+          rustup toolchain install "${toolchain}" --profile minimal
+          rustup run "${toolchain}" rustc --version
+
+      - name: Show disk space before build
+        shell: bash
+        run: df -h / "${GITHUB_WORKSPACE}"
+
+      - name: Build qmcode
+        shell: bash
+        run: qianmo/build-linux.sh "${QIANMO_DIST}"
+
+      - name: Show disk space after build
+        if: always()
+        shell: bash
+        run: df -h / "${GITHUB_WORKSPACE}"
+
+      - name: Collect artifact name
+        id: dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          buildinfo=("${QIANMO_DIST}"/qmcode-*.buildinfo)
+          if [[ ${#buildinfo[@]} -ne 1 ]]; then
+            echo "expected exactly one buildinfo file, found ${#buildinfo[@]}" >&2
+            exit 1
+          fi
+          name="$(sed -n 's/^name=//p' "${buildinfo[0]}")"
+          test -n "${name}"
+          echo "name=${name}" >>"${GITHUB_OUTPUT}"
+          {
+            echo "### ${name}"
+            echo
+            echo '```'
+            cat "${buildinfo[0]}"
+            echo '```'
+          } >>"${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload qmcode artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.dist.outputs.name }}
+          path: |
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.sha256
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.buildinfo
+            ${{ env.QIANMO_DIST }}/${{ steps.dist.outputs.name }}.build.log
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build log after a failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: qmcode-build-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.QIANMO_DIST }}/*.build.log
+          if-no-files-found: ignore
+          retention-days: 30
