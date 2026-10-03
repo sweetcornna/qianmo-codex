@@ -1,4 +1,4 @@
-// Modified by Qianmo AgentNest Team (2026): help usage, --version, and shell completions use the qmcode name.
+// Modified by Qianmo AgentNest Team (2026): help usage, --version, and shell completions use the qmcode name; `qmcode update` refuses to run the upstream updater.
 use clap::Args;
 use clap::CommandFactory;
 use clap::Parser;
@@ -184,6 +184,8 @@ enum Subcommand {
     Completion(CompletionCommand),
 
     /// Update Codex to the latest version.
+    // Qianmo: hidden; `run_update_command` refuses (the upstream updater installs official Codex).
+    #[clap(hide = true)]
     Update,
 
     /// Diagnose local Codex installation, config, auth, and runtime health.
@@ -857,23 +859,12 @@ fn resolve_windows_update_command_from_path(
         .ok_or_else(|| anyhow::anyhow!("could not find update command `{command}` on PATH"))
 }
 
-fn run_update_command() -> anyhow::Result<()> {
-    #[cfg(debug_assertions)]
-    {
-        anyhow::bail!(
-            "`codex update` is not available in debug builds. Install a release build of Codex to use this command."
-        );
-    }
+/// Qianmo: every upstream update action (npm `@openai/codex`, the Homebrew cask, or
+/// chatgpt.com/codex/install.sh) installs the official `codex`, never qmcode.
+const QMCODE_UPDATE_UNAVAILABLE: &str = "`qmcode update` is not available: qmcode does not update itself, and the upstream updater would install the official Codex package instead. Install a newer qmcode build to update.";
 
-    #[cfg(not(debug_assertions))]
-    {
-        let Some(action) = codex_tui::get_update_action() else {
-            anyhow::bail!(
-                "Could not detect the Codex installation method. Please update manually: https://developers.openai.com/codex/cli/"
-            );
-        };
-        run_update_action(action, /*cli_executable*/ None)
-    }
+fn run_update_command() -> anyhow::Result<()> {
+    anyhow::bail!(QMCODE_UPDATE_UNAVAILABLE)
 }
 
 fn run_execpolicycheck(cmd: ExecPolicyCheckCommand) -> anyhow::Result<()> {
@@ -3441,6 +3432,24 @@ mod tests {
             let help = help_from_args(&["codex", "plugin", "marketplace", subcommand, "--help"]);
             assert!(help.contains(usage), "{help}");
         }
+    }
+
+    #[test]
+    fn update_subcommand_is_hidden_and_refuses_to_run() {
+        let cli = MultitoolCli::try_parse_from(["qmcode", "update"]).expect("update should parse");
+        assert!(matches!(cli.subcommand, Some(Subcommand::Update)));
+
+        let err =
+            run_update_command().expect_err("qmcode update must not run the upstream updater");
+        assert_eq!(err.to_string(), QMCODE_UPDATE_UNAVAILABLE);
+
+        let help = help_from_args(&["qmcode", "--help"]);
+        assert!(
+            !help
+                .lines()
+                .any(|line| line.trim_start().starts_with("update ")),
+            "{help}"
+        );
     }
 
     #[test]

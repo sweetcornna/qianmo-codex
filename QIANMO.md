@@ -32,7 +32,7 @@
 | 文件 | 改了什么 | 为什么 |
 |---|---|---|
 | `cli/Cargo.toml` | `[[bin]] name` 和 `default-run` 由 `codex` 改为 `qmcode`；`logs_client` 不动 | 二进制与官方 `codex` 同机共存 |
-| `cli/src/main.rs` | clap 的 `name`、`bin_name`、`override_usage` 和 `completion` 子命令生成补全脚本时用的命令名改为 `qmcode`；`plugin marketplace` 帮助用例期望的用法行改为 `qmcode`；新增 `--version` 输出用例 | `--version` 输出 `qmcode <版本>`，能与官方 `codex-cli` 区分；帮助文本与实际命令一致；`qmcode completion` 不能生成注册到 `codex` 上的补全，否则会覆盖官方补全；clap 把父命令名传给子命令，子命令上写死的 `bin_name = "codex plugin …"` 在帮助里不生效 |
+| `cli/src/main.rs` | clap 的 `name`、`bin_name`、`override_usage` 和 `completion` 子命令生成补全脚本时用的命令名改为 `qmcode`；`plugin marketplace` 帮助用例期望的用法行改为 `qmcode`；新增 `--version` 输出用例；`update` 子命令从帮助里隐藏，执行时直接报错（`run_update_command`），新增用例 | `--version` 输出 `qmcode <版本>`，能与官方 `codex-cli` 区分；帮助文本与实际命令一致；`qmcode completion` 不能生成注册到 `codex` 上的补全，否则会覆盖官方补全；clap 把父命令名传给子命令，子命令上写死的 `bin_name = "codex plugin …"` 在帮助里不生效；上游的 `update` 按安装方式跑 npm、Homebrew 或 `chatgpt.com/codex/install.sh`，装的都是官方包 |
 | `cli/src/snapshots/qmcode__*.snap`（4 个）、`cli/src/doctor/snapshots/qmcode__*.snap`（7 个） | 由 `codex__*.snap` 改名；`qmcode__exec_server_args_tests__exec_server_help_documents_remote_options.snap` 里的 `Usage: codex exec-server` 改为 `Usage: qmcode exec-server` | insta 快照文件名的前缀是 crate 名，二进制改名后 crate 名随之变为 `qmcode`；用法行跟随 `bin_name` |
 | `utils/home-dir/src/lib.rs` | `find_codex_home()` 读 `QMCODE_HOME`，默认 `~/.qmcode`；错误信息同步；新增用例确认设了 `CODEX_HOME` 也不影响结果 | 状态目录隔离的唯一入口：会话、sqlite、日志、arg0 临时目录、daemon socket、`.env`、登录凭据都由它派生 |
 | `config/src/loader/mod.rs` | Unix 系统级 `config.toml`、`requirements.toml` 改到 `/etc/qmcode/`；挂上 `qianmo_defaults_tests` 用例模块 | 同机装了官方企业配置时，qmcode 不读它 |
@@ -78,6 +78,7 @@
 - **Bazel**：`BUILD.bazel` 仍按 `codex` 命名。本 fork 只支持 cargo 构建。
 - **升级入口**：上游的升级检查查的是 `openai/codex` 的发行，给出的升级命令装的是官方包（npm `@openai/codex`、Homebrew cask `codex`、`chatgpt.com/codex/install.sh`），装上的是 `codex`，不会更新 qmcode。处理：
   - 启动时的升级检查、升级弹窗和「Update available」提示默认关闭（`config/defaults.toml` 的 `check_for_update_on_startup = false`）。用户在 `config.toml` 里写 `check_for_update_on_startup = true` 会重新打开上游这一套，不要打开。
+  - `qmcode update` 从帮助里隐藏；执行时不做任何安装，报错 ``qmcode update` is not available: qmcode does not update itself, and the upstream updater would install the official Codex package instead. Install a newer qmcode build to update.`` 并以非零退出码退出。debug 与 release 构建行为相同。
   - 未改：`qmcode doctor` 的 `updates` 一行仍会请求 GitHub `openai/codex` 的最新发行号并显示安装方式（只读，不安装）；`/daemon` 菜单的「Install latest public stable」与 `qmcode app-server daemon update` 仍从 `chatgpt.com/codex/install.sh` 装官方包到 `~/.qmcode/packages/`（第 3 节，手动触发，节点不用 daemon）。
 - **上游 workflow**：fork 上 Actions 已启用，上游的 29 个 workflow 都处于启用状态。push `qianmo/*` 分支不会触发任何上游 workflow（分支过滤只有 `main` 和 `**full-ci**`，分支名不要带 `full-ci`）；但下列操作会触发：push fork 的 `main`（`blocking-ci`、`postmerge-ci`）、fork 内开任何 PR（`blocking-ci`、`v8-canary`）、推 `rust-v*.*.*` 标签（`rust-release`，跑完还会经 `workflow_run` 带起 `python-sdk-cli-release`；`rusty-v8-v*`、`codex-zsh-v*` 同理）。`cla`、`issue-*`、`close-stale-contributor-prs`、`python-sdk-release` 有 `openai/codex` 仓库判断，在 fork 上触发后跳过。runner 写成 `${{ github.event.repository.name }}-*` 的 job 在 fork 上解析为 `qianmo-codex-*` 自定义 runner，和 `macos-15-xlarge` 的 job 一样开跑即失败，不会排队（2026-09-29 push `main` 的两次运行实测如此）。**不要把上游标签推到 fork**；构建脚本也不依赖标签。是否在 fork 的 Actions 设置里停用这些 workflow，待负责人定（第 9 节）。
 - **Linux 沙箱依赖系统 `bwrap`**：产物不带 bubblewrap。qmcode 先找 `PATH` 上支持 `--perms` 的 `bwrap`，再找可执行文件旁的 `codex-resources/bwrap` 或 `bwrap`（`linux-sandbox/src/launcher.rs`）。都没有时，`read-only`、`workspace-write` 下的命令全部失败（`bubblewrap is unavailable`），`features.use_legacy_landlock` 也不能绕过（`filesystem-restricted execution requires bubblewrap`）；只有 `danger-full-access` 能跑命令。2026-10-03 在未装 bubblewrap 的 Debian 13 节点上实测如此。上游 release 另编 `--bin bwrap`（需要 `libcap-dev`）并把摘要编进二进制，本 fork 没做。
@@ -197,7 +198,7 @@ qianmo/build-linux.sh [输出目录]   # 输出目录缺省为 codex-rs/target/q
 
 | 事项 | 归属 | 状态 |
 |---|---|---|
-| 关闭 qmcode 的启动升级检查与升级提示，避免引导用户装回官方包（`check_for_update_on_startup` 等） | P17.3（与 `config/defaults.toml` 内置项一起改） | 启动检查已关（第 4 节「升级入口」）；`qmcode update` 未改 |
+| 关闭 qmcode 的启动升级检查与升级提示，避免引导用户装回官方包（`check_for_update_on_startup` 等） | P17.3（与 `config/defaults.toml` 内置项一起改） | 已完成：启动检查默认关，`qmcode update` 拒绝执行（第 4 节「升级入口」） |
 | fork 默认分支改为 `qianmo/main`，使 `qianmo-build-linux` 也可手动触发（push `qianmo/build/**` 已可触发，非必需） | 负责人 | 待定 |
 | 是否在 fork 的 Actions 设置里停用会被自动触发的上游 workflow（第 4 节） | 负责人 | 待定 |
 | Linux 产物是否加编 `bwrap`（第 4 节「Linux 沙箱依赖系统 `bwrap`」）。节点要用 `read-only`、`workspace-write` 沙箱时需要；P17.5 节点桥按计划用 `danger-full-access`，不需要 | 负责人 | 待定 |
