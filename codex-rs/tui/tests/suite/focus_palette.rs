@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): header checks look for the qmcode title.
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
@@ -206,7 +207,7 @@ fn default_owned_screen_entry_paints_before_sync_ends_and_exit_clears_inline_dra
     first_frame.process(&terminal.output[..end]);
     let first_contents = first_frame.screen().contents();
     ensure!(
-        first_contents.contains("OpenAI Codex")
+        first_contents.contains(">_ qmcode")
             && first_contents.contains("Ask Codex to do anything"),
         "owned-screen synchronization ended before its first complete loading frame:\n{first_contents}"
     );
@@ -381,7 +382,7 @@ impl PtyCodex {
             self.read_output(Duration::from_millis(/*millis*/ 50))?;
             self.answer_startup_queries()?;
 
-            if self.palette_answered && self.screen_contains("OpenAI Codex") {
+            if self.palette_answered && self.screen_contains(">_ qmcode") {
                 return Ok(());
             }
 

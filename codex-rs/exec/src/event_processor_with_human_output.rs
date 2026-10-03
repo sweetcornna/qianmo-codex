@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): the exec banner names qmcode.
 use std::io::IsTerminal;
 use std::path::PathBuf;
 
@@ -216,7 +217,7 @@ impl EventProcessor for EventProcessorWithHumanOutput {
         session_configured_event: &SessionConfiguredEvent,
     ) {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
-        eprintln!("OpenAI Codex v{VERSION}\n--------");
+        eprintln!("qmcode v{VERSION}\n--------");
         for (key, value) in config_summary_entries(config, session_configured_event) {
             eprintln!("{} {}", format!("{key}:").style(self.bold), value);
         }

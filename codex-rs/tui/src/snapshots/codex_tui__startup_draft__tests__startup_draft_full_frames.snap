@@ -1,11 +1,10 @@
 ---
 source: tui/src/startup_draft_tests.rs
-assertion_line: 148
 expression: "snapshots.join(\"\\n---\\n\")"
 ---
 empty (48 columns):
 
-  >_ OpenAI Codex (v<VERSION>)
+  >_ qmcode (v<VERSION>)
      loading
 
   Pull up a prompt.
@@ -17,7 +16,7 @@ empty (48 columns):
 ---
 resuming (48 columns):
 
-  >_ OpenAI Codex (v<VERSION>)
+  >_ qmcode (v<VERSION>)
      loading
 
   Pull up a prompt.
@@ -29,7 +28,7 @@ resuming (48 columns):
 ---
 forking (48 columns):
 
-  >_ OpenAI Codex (v<VERSION>)
+  >_ qmcode (v<VERSION>)
      loading
 
   Pull up a prompt.
@@ -41,7 +40,7 @@ forking (48 columns):
 ---
 multiline (48 columns):
 
-  >_ OpenAI Codex (v<VERSION>)
+  >_ qmcode (v<VERSION>)
      loading
 
   Pull up a prompt.
@@ -54,7 +53,7 @@ multiline (48 columns):
 ---
 narrow (18 columns):
 
-  >_ OpenAI Codex…
+  >_ qmcode (v0.1…
      loading
 
   Pull up a promp…

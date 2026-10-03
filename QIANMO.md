@@ -53,6 +53,10 @@
 | `tui/src/chatwidget/input_submission.rs` | `submit_shell_command_with_history` 改为 `pub(super)` | 供上一行调用 |
 | `tui/src/chatwidget/tests.rs`、`tui/src/chatwidget/tests/qianmo_handoff_tests.rs`（新增） | 命令表含两项；分发到 `qm handoff now` / `qm handoff pull`；输入框敲 `/handoff` 后命令输出显示在会话里；回合进行中拒绝；远程会话拒绝、本机 daemon 照常 | 见第 10.3 节 |
 | `tui/src/bottom_pane/snapshots/codex_tui__bottom_pane__command_popup__tests__command_popup_default_items.snap` | 命令列表多出 `/handoff`、`/pull` 两行 | 跟随枚举 |
+| `tui/src/history_cell/session.rs`、`tui/src/status/card.rs` | 会话头卡片、紧凑会话头、纯文本会话头和 `/status` 卡片的标题 `OpenAI Codex` 改为 `qmcode` | 计划 D-5 定产品名不用 Codex 商标；本文件没有另定界面产品名，用二进制名 |
+| `exec/src/event_processor_with_human_output.rs` | `qmcode exec` 人读输出开头的 `OpenAI Codex v<版本>` 改为 `qmcode v<版本>` | 同上 |
+| `tui/src/app/tests/startup_frame_tests.rs`、`tui/src/app/tests/session_lifecycle_requests.rs`、`tui/src/chatwidget/rendering_tests.rs`、`tui/tests/suite/focus_palette.rs` | 判断会话头是否出现的断言改为找 `>_ qmcode`；`rendering_tests.rs` 的内联快照重录 | 跟随标题。`tui/tests` 是集成测试，不在合并门禁内，未跑 |
+| `tui/src/**/snapshots/*.snap`（47 个） | 标题改为 `qmcode`；其中 31 个原来录的是 `v0.0.0`，重录后是 `v0.158.0` | 跟随标题，见第 5 节失败数说明 |
 | `Cargo.lock` | 158 个工作区 crate 的 `version` 由 `0.0.0` 改为 `0.158.0`，其余不变 | 上游发行提交只改 `Cargo.toml` 的版本号，不提交这一步就无法 `--locked` 构建。这是 cargo 生成的文件，不加文件头：cargo 下次非 `--locked` 改写时会把注释行去掉 |
 | `../QIANMO.md`（新增） | 本文件 | 改动清单、合并步骤、构建方法 |
 | `../qianmo/build-linux.sh`（新增） | Linux 原生构建脚本：编 `qmcode` 与 `codex-code-mode-host` 两个 bin，都剥离、都出 `.debug`，放进同一个产物目录 | 见第 6、7 节 |
@@ -118,11 +122,15 @@
    ```
    `PATH` 上不能有 `qm`（`command -v qm` 无输出）：`codex-tui` 里起内嵌 app-server 跑真实回合的用例会按内置配置（第 10 节）拉起 `qm handoff mcp`，回合结束调 `qm handoff sync`。有 `qm` 时先把它所在目录移出 `PATH` 再跑。
 
-   跑完 `target/qianmo-test-home` 下应只有 `.qmcode`。在 `rust-v0.158.0` 上，`codex-tui` 有 40 条用例失败：
+   跑完 `target/qianmo-test-home` 下应只有 `.qmcode`。在 `rust-v0.158.0` 上（P17.1 基线），`codex-tui` 有 40 条用例失败：
    - 39 条是快照差异：快照是在上游 `main`（工作区版本 `0.0.0`）上录的，发行标签把版本改成了 `0.158.0`，差异只有版本号和它引起的排版宽度；
-   - 1 条是 insta 报「Insta does not allow inline snapshot assertions in loops」，落在 `tui/src/app/tests/safety_buffering.rs` 里共用 `interrupt_after_inactive_steer` 的两条用例之一，哪条失败每次不同。该文件与上游标签一致。
+   - 1 条是 insta 报「Insta does not allow inline snapshot assertions in loops」，落在 `tui/src/app/tests/safety_buffering.rs` 里共用 `interrupt_after_inactive_steer` 的两条用例之一，哪条失败每次不同。
 
-   判据是失败数不增加，快照差异仍只含版本号。失败的快照用例会在源码树里留下未跟踪的 `*.snap.new` 和 `.*.pending-snap`，核对完删掉，不要提交。
+   P17.3 把界面标题改成 `qmcode`（第 2 节），带标题的快照全部重录，重录时版本号随之变成 `0.158.0`，所以那些用例不再失败。现在剩 10 条：
+   - 9 条只差版本号：`app::daemon_menu::tests::daemon_menu_is_read_only_and_confirmation_can_cancel_or_handoff`、`app::tests::active_reconnect::reconnect_allows_slow_hydration_but_bounds_a_stalled_server`、`app::tests::navigation_reconnect::reconnect_daemon_command_center_after_socket_replacement_without_a_conversation`、`history_cell::tests::{pnpm,standalone_unix,standalone_windows,vite_plus}_update_available_history_cell_snapshot`、`update_prompt::tests::{update_prompt_snapshot,long_update_command_keeps_selected_skip_visible_in_a_short_viewport}`；
+   - 1 条是上面那条 insta 报错。
+
+   判据是失败数不增加，快照差异仍只含版本号。机器负载高时（2026-10-03 实测负载 11 左右），`app::tests::session_lifecycle_requests` 下几条带秒级超时的用例偶尔报 `deadline has elapsed` 或 `timed out waiting for MCP task registration`，单独重跑能过；判定前单独重跑一次。下次合并上游发行标签时，重录过的快照文件可能与上游改动冲突：取上游一侧后重跑本门禁，用 `cargo insta accept --snapshot <文件>` 只接受差异是标题或版本号的那些。失败的快照用例会在源码树里留下未跟踪的 `*.snap.new` 和 `.*.pending-snap`，核对完删掉，不要提交。
 6. 复查上游 workflow：合并可能带进新的 workflow 文件，或改动已有文件的触发条件。按第 4 节「上游 workflow」一条重新核对，不要推上游标签。
 7. 重跑 P17.2 第 3、5 项探针；重新出 Linux 产物（第 6 节）。
 8. 在第 8 节记一行：日期、标签、冲突文件、耗时。

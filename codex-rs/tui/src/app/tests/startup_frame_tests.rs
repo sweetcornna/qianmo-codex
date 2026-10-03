@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): the header check looks for the qmcode title.
 //! Startup handoff preserves the loading frame until replayed cells can replace it.
 
 use super::*;
@@ -163,7 +164,7 @@ async fn owned_startup_preserves_loading_until_resume_replay_is_applied() -> Res
         if has_answer {
             assert!(rendered.contains("Retained answer after resume."));
         } else {
-            assert!(rendered.contains("OpenAI Codex"));
+            assert!(rendered.contains(">_ qmcode"));
         }
         tui.set_owned_screen(/*owned*/ false)?;
         app_server.shutdown().await?;

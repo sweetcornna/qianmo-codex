@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): the session header title is qmcode.
 //! Session headers, onboarding guidance, and transcript cards.
 
 use std::sync::Arc;
@@ -404,7 +405,7 @@ impl HistoryCell for SessionHeaderHistoryCell {
             Line::from(vec![
                 "  ".into(),
                 ">_ ".fg(accent_color()),
-                "OpenAI Codex".bold(),
+                "qmcode".bold(),
                 format!(" (v{})", self.version).dim(),
             ]),
             Line::from(vec![
@@ -444,10 +445,10 @@ impl HistoryCell for SessionHeaderHistoryCell {
 
         let make_row = |spans: Vec<Span<'static>>| Line::from(spans);
 
-        // Title line rendered inside the box: ">_ OpenAI Codex (vX)"
+        // Title line rendered inside the box: ">_ qmcode (vX)"
         let title_spans: Vec<Span<'static>> = vec![
             Span::from(">_ ").dim(),
-            Span::from("OpenAI Codex").bold(),
+            Span::from("qmcode").bold(),
             Span::from(" ").dim(),
             Span::from(format!("(v{})", self.version)).dim(),
         ];
@@ -524,7 +525,7 @@ impl HistoryCell for SessionHeaderHistoryCell {
                 .collect();
         }
         let mut lines = vec![
-            Line::from(format!("OpenAI Codex (v{})", self.version)),
+            Line::from(format!("qmcode (v{})", self.version)),
             Line::from(format!(
                 "model: {}{}",
                 self.model,

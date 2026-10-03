@@ -1,3 +1,4 @@
+// Modified by Qianmo AgentNest Team (2026): the session header inline snapshot shows the qmcode title.
 use super::*;
 use crate::chatwidget::tests::make_chatwidget_manual_with_sender;
 use pretty_assertions::assert_eq;
@@ -401,9 +402,9 @@ async fn initial_session_header_starts_at_the_top_of_the_viewport() {
     let cwd = widget.config.cwd.as_path().display().to_string();
     let normalized_cwd = format!("{:<width$}", "/tmp/project", width = cwd.len());
 
-    insta::assert_snapshot!(header.replace(&cwd, &normalized_cwd), @r"
+    insta::assert_snapshot!(header.replace(&cwd, &normalized_cwd), @"
     ╭───────────────────────────────────────╮
-    │ >_ OpenAI Codex (v<VERSION>)              │
+    │ >_ qmcode (v<VERSION>)                  │
     │                                       │
     │ model:     loading   /model to change │
     │ directory: /tmp/project               │
