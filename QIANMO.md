@@ -102,7 +102,11 @@
    cargo test -p codex-cli --bin qmcode
    cargo test -p codex-tui --lib
    ```
-   跑完 `target/qianmo-test-home` 下应只有 `.qmcode`。在 `rust-v0.158.0` 上，`codex-tui` 有 40 条快照用例失败：快照是在上游 `main`（工作区版本 `0.0.0`）上录的，发行标签把版本改成了 `0.158.0`，差异只有版本号和它引起的排版宽度。判据是失败数不增加、差异仍只含版本号。
+   跑完 `target/qianmo-test-home` 下应只有 `.qmcode`。在 `rust-v0.158.0` 上，`codex-tui` 有 40 条用例失败：
+   - 39 条是快照差异：快照是在上游 `main`（工作区版本 `0.0.0`）上录的，发行标签把版本改成了 `0.158.0`，差异只有版本号和它引起的排版宽度；
+   - 1 条是 insta 报「Insta does not allow inline snapshot assertions in loops」，落在 `tui/src/app/tests/safety_buffering.rs` 里共用 `interrupt_after_inactive_steer` 的两条用例之一，哪条失败每次不同。该文件与上游标签一致。
+
+   判据是失败数不增加，快照差异仍只含版本号。失败的快照用例会在源码树里留下未跟踪的 `*.snap.new` 和 `.*.pending-snap`，核对完删掉，不要提交。
 6. 复查上游 workflow：合并可能带进新的 workflow 文件，或改动已有文件的触发条件。按第 4 节「上游 workflow」一条重新核对，不要推上游标签。
 7. 重跑 P17.2 第 3、5 项探针；重新出 Linux 产物（第 6 节）。
 8. 在第 8 节记一行：日期、标签、冲突文件、耗时。
